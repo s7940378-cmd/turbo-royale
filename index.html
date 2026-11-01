@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Turbo Royale — free online kart racing</title>
+<meta name="description" content="Turbo Royale is a free 3D kart racing game in your browser. Race bots or friends, drift, use items, and unlock karts in the daily item shop. No download needed.">
+<meta property="og:title" content="Turbo Royale — free online kart racing">
+<meta property="og:description" content="Join my party and race! Free 3D kart racing in your browser — drift, boost, and knock out your friends.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#1b5cff">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%8E%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Rubik:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--blue:#1b5cff;--blue2:#0c2a8a;--purple:#6b1fd6;--yellow:#ffe14a;--yellow2:#ffb800;--ink:#0b1030;--panel:rgba(10,18,60,.82);--line:rgba(255,255,255,.14);--cyan:#2bf0ff;--pink:#ff2bd6}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#0b1030;color:#fff;font-family:Rubik,system-ui,sans-serif;font-weight:500;user-select:none}
+.hidden{display:none!important}
+.disp{font-family:'Lilita One',Rubik,sans-serif;letter-spacing:.5px;text-transform:uppercase;font-weight:400}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input{font:inherit}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block;background:#1a2a8a}
+/* ---- boot ---- */
+#boot{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:radial-gradient(ellipse at 50% 30%,#3a6bff 0%,#1b2fb5 45%,#120a5a 100%)}
+.logo{font-family:'Lilita One',sans-serif;font-size:clamp(44px,9vw,110px);line-height:.9;text-align:center;color:var(--yellow);text-shadow:0 6px 0 #b56a00,0 10px 30px rgba(0,0,0,.5);transform:rotate(-3deg);-webkit-text-stroke:3px #1a1033}
+.logo small{display:block;font-size:.42em;color:#fff;-webkit-text-stroke:2px #1a1033;text-shadow:0 4px 0 #1a1033}
+#bootMsg{opacity:.85;font-weight:700}
+.spinner{width:42px;height:42px;border:5px solid rgba(255,255,255,.25);border-top-color:var(--yellow);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* ---- top bar ---- */
+#ui{position:fixed;inset:0;z-index:5;pointer-events:none}
+#ui>*{pointer-events:auto}
+#top{position:absolute;top:0;left:0;right:0;height:64px;display:flex;align-items:center;gap:10px;padding:0 14px;background:linear-gradient(180deg,rgba(6,12,50,.9),rgba(6,12,50,.55));border-bottom:1px solid var(--line)}
+#top .mini{font-family:'Lilita One';color:var(--yellow);font-size:26px;-webkit-text-stroke:1.5px #1a1033;text-shadow:0 3px 0 #b56a00;margin-right:8px;white-space:nowrap}
+#tabs{display:flex;gap:2px;flex:1;overflow-x:auto;scrollbar-width:none}
+#tabs::-webkit-scrollbar{display:none}
+.tab{font-family:'Lilita One';font-size:18px;padding:10px 14px;color:rgba(255,255,255,.7);text-transform:uppercase;white-space:nowrap;border-bottom:4px solid transparent}
+.tab:hover{color:#fff}
+.tab.on{color:#fff;border-bottom-color:var(--yellow)}
+.pill{display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-weight:900;white-space:nowrap}
+.coin{display:inline-block;width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff6a8,#ffc928 45%,#c7860a);box-shadow:inset 0 -2px 0 rgba(0,0,0,.25);flex:none}
+.lvl{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-family:'Lilita One';font-size:17px;background:conic-gradient(var(--yellow) var(--p,0%),rgba(255,255,255,.15) 0);position:relative;flex:none}
+.lvl::before{content:'';position:absolute;inset:4px;border-radius:50%;background:#16206b}
+.lvl span{position:relative}
+.icon-btn{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.1);font-size:20px;flex:none}
+.icon-btn:hover{background:rgba(255,255,255,.2)}
+/* ---- panes ---- */
+.pane{position:absolute;top:64px;left:0;right:0;bottom:0;overflow:auto}
+.full{background:linear-gradient(160deg,rgba(20,40,160,.94),rgba(60,14,140,.94))}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 18px 40px}
+h2.disp{font-size:34px;margin-bottom:4px;text-shadow:0 3px 0 rgba(0,0,0,.35)}
+.subt{opacity:.75;margin-bottom:18px}
+/* play pane */
+#party{position:absolute;left:14px;top:14px;width:290px;max-height:calc(100% - 28px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;backdrop-filter:blur(6px)}
+#party h3{font-family:'Lilita One';font-size:20px;text-transform:uppercase;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.mem{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;background:rgba(255,255,255,.06);margin-bottom:6px}
+.mem .av{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-weight:900;flex:none}
+.mem .nm{flex:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mem .st{font-size:12px;font-weight:900;padding:3px 7px;border-radius:6px;background:rgba(255,255,255,.12)}
+.mem .st.rdy{background:#2fbf4a}
+.btn{font-family:'Lilita One';text-transform:uppercase;font-size:17px;padding:10px 16px;border-radius:12px;background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.18);transition:transform .08s}
+.btn:hover{background:rgba(255,255,255,.22)}
+.btn:active{transform:scale(.97)}
+.btn.y{background:linear-gradient(180deg,#fff27a,#ffc400);color:#2a1a00;border-color:#fff7b0;box-shadow:0 5px 0 #b57a00}
+.btn.y:hover{filter:brightness(1.06)}
+.btn.b{background:linear-gradient(180deg,#4f8bff,#1b4fe0);border-color:#7fa9ff;box-shadow:0 4px 0 #0c2a8a}
+.btn.g{background:linear-gradient(180deg,#5fe06f,#21a33a);border-color:#9bf0a5;box-shadow:0 4px 0 #0e6a20}
+.btn.r{background:linear-gradient(180deg,#ff6a6a,#d42a2a);border-color:#ff9f9f;box-shadow:0 4px 0 #8a1010}
+.btn.sm{font-size:14px;padding:6px 10px;border-radius:9px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:8px;align-items:center}
+.inp{flex:1;min-width:0;background:rgba(0,0,0,.35);border:2px solid var(--line);border-radius:10px;padding:9px 10px;color:#fff;font-weight:900;letter-spacing:2px;text-transform:uppercase}
+.inp:focus{outline:none;border-color:var(--yellow)}
+.code{font-family:'Lilita One';font-size:26px;letter-spacing:4px;color:var(--yellow)}
+.muted{opacity:.65;font-size:13px}
+.sep{height:1px;background:var(--line);margin:12px 0}
+#playBox{position:absolute;right:18px;bottom:18px;width:340px;display:flex;flex-direction:column;gap:10px}
+#modeCard{display:flex;align-items:center;gap:12px;padding:12px;border-radius:16px;background:var(--panel);border:2px solid var(--line);text-align:left;backdrop-filter:blur(6px)}
+#modeCard:hover{border-color:var(--yellow)}
+#modeCard .mi{width:64px;height:64px;border-radius:12px;flex:none;background-size:cover;background-position:center}
+#modeCard b{font-family:'Lilita One';font-size:22px;text-transform:uppercase;display:block}
+#playBtn{font-size:40px;padding:16px;border-radius:16px;box-shadow:0 7px 0 #b57a00,0 12px 30px rgba(0,0,0,.4)}
+#daily{position:absolute;left:50%;top:14px;transform:translateX(-50%)}
+#lobbyTags{position:absolute;inset:0;pointer-events:none}
+#lobbyTags div{position:absolute;transform:translate(-50%,-100%);font-family:'Lilita One';font-size:18px;text-shadow:0 2px 0 #000,0 0 8px rgba(0,0,0,.6);white-space:nowrap;text-align:center}
+#lobbyTags div i{display:block;font-style:normal;font-family:Rubik;font-weight:900;font-size:11px;letter-spacing:1px;color:var(--yellow)}
+/* cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.grid.big{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.card{position:relative;border-radius:12px;overflow:hidden;cursor:pointer;aspect-ratio:3/4;display:flex;flex-direction:column;box-shadow:0 4px 0 rgba(0,0,0,.3);transition:transform .1s}
+.card:hover{transform:translateY(-3px) scale(1.02)}
+.card .th{flex:1;background-size:contain;background-position:center 45%;background-repeat:no-repeat;display:grid;place-items:center;font-size:58px}
+.card .info{background:rgba(5,10,40,.78);padding:7px 9px}
+.card .info b{display:block;font-family:'Lilita One';font-size:17px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .info small{opacity:.75;font-size:11px;text-transform:uppercase;font-weight:900;letter-spacing:.5px}
+.card .price{display:flex;align-items:center;gap:5px;font-weight:900;margin-top:2px}
+.card .eq{position:absolute;top:8px;right:8px;background:var(--yellow);color:#2a1a00;font-weight:900;font-size:11px;padding:3px 7px;border-radius:6px}
+.card.sel{outline:4px solid var(--yellow);outline-offset:-4px}
+.card .stripe{height:5px}
+.card.big{aspect-ratio:4/3.4}
+.card .owned{position:absolute;top:8px;left:8px;background:#2fbf4a;font-weight:900;font-size:11px;padding:3px 7px;border-radius:6px}
+#locker{position:absolute;right:0;top:0;bottom:0;width:min(560px,100%);background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;backdrop-filter:blur(8px)}
+#slotTabs{display:flex;gap:6px;padding:14px;flex-wrap:wrap}
+.chip{padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.1);font-weight:900;font-size:13px;text-transform:uppercase}
+.chip.on{background:var(--yellow);color:#2a1a00}
+#lockerGrid{padding:0 14px 20px;overflow:auto;flex:1}
+#lockerGrid .grid{grid-template-columns:repeat(auto-fill,minmax(118px,1fr))}
+.timer{display:inline-flex;gap:8px;align-items:center;background:rgba(0,0,0,.3);padding:6px 12px;border-radius:999px;font-weight:900}
+.sec{font-family:'Lilita One';font-size:24px;text-transform:uppercase;margin:22px 0 10px}
+/* pass */
+.passbar{height:16px;border-radius:999px;background:rgba(0,0,0,.35);overflow:hidden;margin:8px 0 18px;border:1px solid var(--line)}
+.passbar i{display:block;height:100%;background:linear-gradient(90deg,#ffe14a,#ff9f2e)}
+#passTrack{display:flex;gap:10px;overflow-x:auto;padding:6px 2px 14px}
+.tier{flex:none;width:118px;border-radius:12px;overflow:hidden;background:rgba(0,0,0,.25);border:2px solid var(--line);text-align:center}
+.tier .n{font-family:'Lilita One';font-size:18px;padding:5px;background:rgba(0,0,0,.3)}
+.tier .rw{height:110px;display:grid;place-items:center;background-size:contain;background-repeat:no-repeat;background-position:center;font-size:40px}
+.tier .lb{font-size:12px;font-weight:900;padding:6px 4px;min-height:42px}
+.tier.got{border-color:#2fbf4a}
+.tier.got .n{background:#2fbf4a}
+.tier.cur{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(255,225,74,.35)}
+/* challenges */
+.ch{display:flex;gap:14px;align-items:center;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+.ch .ic{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.1);font-size:24px;flex:none}
+.ch .bar{height:10px;border-radius:999px;background:rgba(0,0,0,.4);overflow:hidden;margin-top:6px}
+.ch .bar i{display:block;height:100%;background:var(--yellow)}
+.ch.done{border-color:#2fbf4a;background:rgba(47,191,74,.12)}
+.ch .rw{font-weight:900;font-size:13px;text-align:right;white-space:nowrap}
+table.lb{width:100%;border-collapse:collapse}
+table.lb th,table.lb td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
+table.lb th{font-size:12px;text-transform:uppercase;opacity:.7}
+table.lb tr.me td{background:rgba(255,225,74,.15)}
+table.lb td.r{font-family:'Lilita One';font-size:20px;width:50px}
+/* modal */
+.modal{position:fixed;inset:0;z-index:30;background:rgba(3,6,25,.7);display:grid;place-items:center;padding:16px;backdrop-filter:blur(4px)}
+.mbox{width:min(560px,100%);max-height:calc(100vh - 32px);overflow:auto;background:linear-gradient(160deg,#1b3bd1,#4a14a8);border:2px solid rgba(255,255,255,.25);border-radius:20px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.mbox.wide{width:min(900px,100%)}
+.mbox h3{font-family:'Lilita One';font-size:28px;text-transform:uppercase;margin-bottom:10px}
+.opts{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.opt{padding:12px;border-radius:14px;background:rgba(0,0,0,.3);border:3px solid transparent;text-align:left}
+.opt.on{border-color:var(--yellow);background:rgba(255,225,74,.12)}
+.opt:disabled{opacity:.4}
+.opt b{font-family:'Lilita One';font-size:19px;text-transform:uppercase;display:block}
+.opt .tm{height:90px;border-radius:10px;margin-bottom:8px;background-size:contain;background-repeat:no-repeat;background-position:center}
+.set{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.seg{display:flex;background:rgba(0,0,0,.3);border-radius:10px;padding:3px}
+.seg button{padding:6px 12px;border-radius:8px;font-weight:900;font-size:13px}
+.seg button.on{background:var(--yellow);color:#2a1a00}
+kbd{background:rgba(255,255,255,.15);border-radius:5px;padding:1px 6px;font-weight:900;font-size:12px;border-bottom:2px solid rgba(0,0,0,.4)}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:14px;margin-top:8px}
+/* toasts */
+#toasts{position:fixed;top:76px;right:14px;z-index:40;display:flex;flex-direction:column;gap:8px;pointer-events:none;align-items:flex-end}
+.toast{pointer-events:auto;background:var(--panel);border:2px solid var(--yellow);border-radius:14px;padding:12px 14px;max-width:330px;font-weight:700;animation:tin .25s ease-out;backdrop-filter:blur(6px)}
+@keyframes tin{from{transform:translateX(30px);opacity:0}}
+/* ---- HUD ---- */
+#hud{position:fixed;inset:0;z-index:6;pointer-events:none;font-family:'Lilita One';text-transform:uppercase}
+#hud .pos{position:absolute;right:22px;top:14px;font-size:84px;line-height:1;color:#fff;-webkit-text-stroke:3px #1a1033;text-shadow:0 5px 0 #1a1033}
+#hud .pos sup{font-size:.42em;vertical-align:top;position:relative;top:10px}
+#hud .pos.p1{color:var(--yellow)}#hud .pos.p2{color:#e6eef8}#hud .pos.p3{color:#ffb070}
+.hbox{background:rgba(5,10,40,.6);border-radius:12px;padding:6px 12px;border:1px solid var(--line)}
+#hTopL{position:absolute;left:14px;top:14px;display:flex;flex-direction:column;gap:8px}
+#hTopL .hbox{font-size:22px}
+#hTopL .hbox small{font-size:13px;opacity:.7;margin-right:6px;font-family:Rubik;font-weight:900}
+#hList{font-family:Rubik;text-transform:none;font-weight:700;font-size:13px;background:rgba(5,10,40,.45);border-radius:10px;padding:6px 8px;min-width:150px}
+#hList div{display:flex;gap:8px;padding:1px 0;opacity:.85}
+#hList div span{width:16px;text-align:right;font-weight:900;color:var(--yellow)}
+#hList div.me{opacity:1;color:var(--yellow)}
+#hList div.out{opacity:.35;text-decoration:line-through}
+#hItemBox{position:absolute;left:50%;top:14px;transform:translateX(-50%);width:88px;height:88px;border-radius:18px;background:rgba(5,10,40,.6);border:4px solid rgba(255,255,255,.35);display:grid;place-items:center;font-size:52px;font-family:system-ui}
+#hItemBox.has{border-color:var(--yellow);box-shadow:0 0 22px rgba(255,225,74,.5)}
+#hItemBox.rolling{animation:shake .1s infinite}
+@keyframes shake{50%{transform:translateX(-50%) rotate(4deg)}}
+#hItemN{position:absolute;right:4px;bottom:0;font-family:'Lilita One';font-size:20px;color:var(--yellow);-webkit-text-stroke:1px #000}
+#hItemKey{position:absolute;bottom:-22px;font-family:Rubik;font-size:11px;font-weight:900;opacity:.7;white-space:nowrap}
+#hSpdBox{position:absolute;left:20px;bottom:18px;font-size:58px;line-height:1;-webkit-text-stroke:2px #1a1033;text-shadow:0 4px 0 #1a1033}
+#hSpdBox small{font-size:18px;margin-left:4px}
+.drift{width:160px;height:10px;border-radius:999px;margin-top:6px;background:rgba(0,0,0,.4);border:1px solid var(--line);overflow:hidden}
+.drift::after{content:'';display:block;height:100%;width:0;transition:width .2s}
+.drift.l0::after{width:25%;background:#fff}.drift.l1::after{width:50%;background:#3fb4ff;box-shadow:0 0 10px #3fb4ff}.drift.l2::after{width:75%;background:#ff8a1c;box-shadow:0 0 10px #ff8a1c}.drift.l3::after{width:100%;background:#c25cff;box-shadow:0 0 12px #c25cff}
+#hMap{position:absolute;right:16px;bottom:16px;width:150px;height:150px;border-radius:16px;background:rgba(5,10,40,.45)}
+#hCenter{position:absolute;left:0;right:0;top:30%;text-align:center}
+#hMsg{font-size:clamp(50px,11vw,130px);line-height:1;color:var(--yellow);-webkit-text-stroke:4px #1a1033;text-shadow:0 7px 0 #1a1033}
+#hMsg.pop{animation:pop .35s ease-out}
+@keyframes pop{from{transform:scale(2.2);opacity:0}}
+#hSub{font-size:clamp(20px,3.4vw,34px);margin-top:6px;-webkit-text-stroke:2px #1a1033;text-shadow:0 3px 0 #1a1033}
+#hKo{position:absolute;left:50%;top:116px;transform:translateX(-50%);background:linear-gradient(90deg,#6b1fd6,#c2186b);padding:6px 16px;border-radius:999px;font-family:Rubik;font-weight:900;font-size:14px;letter-spacing:.5px;white-space:nowrap}
+#hTags .tag{position:absolute;left:0;top:0;font-family:Rubik;text-transform:none;font-weight:900;font-size:13px;padding:2px 8px;border-radius:7px;background:rgba(0,0,0,.45);white-space:nowrap}
+#hTags .tag.human{background:rgba(27,92,255,.75);border:1px solid var(--cyan)}
+#hFeed{position:absolute;left:14px;bottom:110px;display:flex;flex-direction:column;gap:4px;font-family:Rubik;text-transform:none;font-weight:900;font-size:14px}
+.feed{background:rgba(107,31,214,.75);padding:4px 10px;border-radius:8px;animation:tin .25s}
+#hPause{position:absolute;right:180px;top:20px;pointer-events:auto;width:44px;height:44px;border-radius:12px;background:rgba(5,10,40,.6);font-size:20px;display:grid;place-items:center}
+#flash{position:fixed;inset:0;z-index:7;background:#bfe8ff;opacity:0;pointer-events:none;mix-blend-mode:screen}
+#touch{position:fixed;inset:auto 0 0 0;height:180px;z-index:8;pointer-events:none}
+#touch button{position:absolute;pointer-events:auto;width:84px;height:84px;border-radius:50%;background:rgba(255,255,255,.18);border:3px solid rgba(255,255,255,.35);font-size:30px;font-family:system-ui;touch-action:none}
+#touch button.on{background:rgba(255,225,74,.5)}
+/* results */
+#results{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(3,6,25,.65);padding:16px;backdrop-filter:blur(3px)}
+#results .mbox{width:min(760px,100%)}
+#resTitle{font-family:'Lilita One';font-size:clamp(40px,8vw,72px);text-align:center;color:var(--yellow);-webkit-text-stroke:3px #1a1033;text-shadow:0 5px 0 #1a1033;line-height:1}
+.resgrid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-top:16px}
+@media(max-height:560px){#party{max-height:calc(100% - 28px);width:250px}#playBtn{font-size:30px;padding:10px}#modeCard .mi{width:48px;height:48px}}
+@media(max-width:640px){.resgrid{grid-template-columns:1fr}#party{width:calc(100% - 28px);max-height:40%}#playBox{width:calc(100% - 36px)}#hud .pos{font-size:58px}#hItemBox{width:66px;height:66px;font-size:38px}#hMap{width:110px;height:110px}#hPause{right:120px}}
+.rrow{display:flex;gap:10px;padding:6px 8px;border-radius:8px;font-weight:700}
+.rrow.me{background:rgba(255,225,74,.2);color:var(--yellow)}
+.rrow span:first-child{width:26px;font-family:'Lilita One'}
+.rrow span:nth-child(2){flex:1}
+.reward{background:rgba(0,0,0,.25);border-radius:12px;padding:12px;margin-bottom:8px;font-weight:900;display:flex;align-items:center;gap:8px}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="flash"></div>
+
+<div id="boot"><div class="logo">Turbo<small>Royale</small></div><div class="spinner"></div><div id="bootMsg">Warming up engines…</div></div>
+
+<div id="ui" class="hidden">
+  <div id="top">
+    <div class="mini">TURBO ROYALE</div>
+    <nav id="tabs">
+      <button class="tab on" data-tab="play">Play</button>
+      <button class="tab" data-tab="locker">Locker</button>
+      <button class="tab" data-tab="shop">Item Shop</button>
+      <button class="tab" data-tab="pass">Turbo Pass</button>
+      <button class="tab" data-tab="challenges">Challenges</button>
+      <button class="tab" data-tab="leaderboard">Leaderboard</button>
+    </nav>
+    <div class="pill" title="Kart Coins"><span class="coin"></span><span id="coins">0</span></div>
+    <div class="lvl" id="lvl" title="Turbo Pass level"><span id="lvlN">1</span></div>
+    <button class="icon-btn" id="setBtn" title="Settings">⚙️</button>
+  </div>
+
+  <section class="pane" id="pane-play">
+    <div id="lobbyTags"></div>
+    <div id="party">
+      <h3>Party <span class="muted" id="onlineDot"></span></h3>
+      <div id="partyBody"></div>
+    </div>
+    <button class="btn b hidden" id="daily">🎁 Claim daily reward</button>
+    <div id="playBox">
+      <button id="modeCard"><div class="mi" id="modeImg"></div><div><small class="muted" id="modeSub">Mode</small><b id="modeName">Grand Prix</b><small id="modeTrack" class="muted"></small></div></button>
+      <button class="btn y" id="playBtn">Play</button>
+    </div>
+  </section>
+
+  <section class="pane hidden" id="pane-locker">
+    <div id="locker">
+      <div id="slotTabs"></div>
+      <div id="lockerGrid"></div>
+    </div>
+  </section>
+
+  <section class="pane full hidden" id="pane-shop"><div class="wrap">
+    <div class="row" style="justify-content:space-between;flex-wrap:wrap"><div><h2 class="disp">Item Shop</h2><div class="subt">New items every day. Earn Kart Coins by racing.</div></div><div class="timer">⏱ Resets in <span id="shopTimer"></span></div></div>
+    <div class="sec">Featured</div><div class="grid big" id="shopFeat"></div>
+    <div class="sec">Daily</div><div class="grid" id="shopDaily"></div>
+  </div></section>
+
+  <section class="pane full hidden" id="pane-pass"><div class="wrap">
+    <h2 class="disp">Turbo Pass · Season 1</h2>
+    <div class="subt">Race to earn XP. Every 1,000 XP unlocks the next tier — rewards are claimed automatically.</div>
+    <div class="row" style="justify-content:space-between"><b id="passLbl"></b><span class="muted" id="passXp"></span></div>
+    <div class="passbar"><i id="passFill"></i></div>
+    <div id="passTrack"></div>
+  </div></section>
+
+  <section class="pane full hidden" id="pane-challenges"><div class="wrap">
+    <div class="row" style="justify-content:space-between;flex-wrap:wrap"><div><h2 class="disp">Daily Challenges</h2><div class="subt">Each one is worth 500 XP + 100 coins.</div></div><div class="timer">⏱ New challenges in <span id="chTimer"></span></div></div>
+    <div id="chList"></div>
+  </div></section>
+
+  <section class="pane full hidden" id="pane-leaderboard"><div class="wrap">
+    <h2 class="disp">Leaderboard</h2>
+    <div class="subt" id="lbSub">Your party scoreboard and career stats.</div>
+    <div id="lbBody"></div>
+  </div></section>
+</div>
+
+<div id="hud" class="hidden">
+  <div id="hTags"></div>
+  <div id="hTopL"><div class="hbox"><small>LAP</small><span id="hLap">1/3</span></div><div class="hbox"><small>TIME</small><span id="hTime">0:00.00</span></div><div id="hList"></div></div>
+  <div id="hItemBox"><span id="hItem"></span><span id="hItemN"></span><span id="hItemKey">E / Enter to use</span></div>
+  <div id="hKo" class="hidden"></div>
+  <div class="pos" id="hPos">1</div>
+  <button id="hPause" title="Menu (Esc)">⏸</button>
+  <div id="hCenter"><div id="hMsg"></div><div id="hSub"></div></div>
+  <div id="hFeed"></div>
+  <div id="hSpdBox"><span id="hSpd">0</span><small>km/h</small><div class="drift" id="hDrift"></div></div>
+  <canvas id="hMap"></canvas>
+</div>
+<div id="touch" class="hidden">
+  <button data-k="left" style="left:16px;bottom:30px">◀</button>
+  <button data-k="right" style="left:112px;bottom:30px">▶</button>
+  <button data-k="drift" style="right:200px;bottom:30px;font-size:16px;font-family:'Lilita One'">DRIFT</button>
+  <button data-k="brake" style="right:108px;bottom:22px;width:72px;height:72px">⬇</button>
+  <button data-k="gas" style="right:16px;bottom:60px">⬆</button>
+  <button data-k="item" style="right:24px;bottom:160px;width:70px;height:70px">🎁</button>
+</div>
+
+<div id="results" class="hidden"><div class="mbox">
+  <div id="resTitle">Victory!</div><div style="text-align:center;font-weight:900;opacity:.85" id="resSub"></div>
+  <div class="resgrid"><div id="resRows"></div><div id="resRewards"></div></div>
+  <div class="row" style="justify-content:flex-end;margin-top:16px;gap:10px"><button class="btn" id="resAgain">Race again</button><button class="btn y" id="resOk">Continue</button></div>
+</div></div>
+
+<div id="modal" class="modal hidden"><div class="mbox" id="mbox"></div></div>
+<div id="toasts"></div>
+
+<script src="js/engine.js"></script>
+<script src="js/data.js"></script>
+<script src="js/sys.js"></script>
+<script src="js/kart.js"></script>
+<script src="js/track.js"></script>
+<script src="js/race.js"></script>
+<script src="js/account.js"></script>
+<script src="js/net.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
