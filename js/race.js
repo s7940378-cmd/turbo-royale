@@ -180,7 +180,7 @@ class Race {
       if (c.brake) { if (f > 0.5) f -= 38 * dt; else f = Math.max(f - 14 * dt, -11); }
       if (!c.gas && !c.brake && Math.abs(f) < 0.3) f = 0;
       // drift
-      if (c.drift && !r.drift && Math.abs(c.steer) > 0.25 && f > 14 && !offroad) { r.drift = true; r.driftDir = Math.sign(c.steer); r.charge = 0; r.hop = 0.35; }
+      if (c.drift && !r.drift && Math.abs(c.steer) > 0.25 && f > 14 && !offroad) { r.drift = true; r.driftDir = Math.sign(c.steer); r.charge = 0; r.hop = 0.35; r.driftK = 0; }
       if (r.drift && (!c.drift || f < 9)) {
         if (f >= 9 && r.charge >= 0.7) {
           const lvl = r.charge >= 2.6 ? 3 : r.charge >= 1.6 ? 2 : 1; r.boost = Math.max(r.boost, [0, 0.55, 1.0, 1.6][lvl]);
@@ -190,12 +190,18 @@ class Race {
       }
       const sf = clamp(Math.abs(f) / 11, 0, 1) * (f < 0 ? -1 : 1);
       let turn;
-      if (r.drift) { turn = (r.driftDir * 1.0 + c.steer * 0.6) * 1.95; r.charge += dt * (1 + 0.6 * Math.max(0, c.steer * r.driftDir)); }
+      if (r.drift) {
+        // drift arc: no input = wide sweeping arc; steer in = tighter; steer out = hold a wide line
+        const k = clamp(c.steer * r.driftDir, -1, 1);
+        r.driftK = lerp(r.driftK || 0, k, 1 - Math.exp(-8 * dt));
+        turn = r.driftDir * (1.0 + 0.62 * r.driftK) * handling;
+        r.charge += dt * (1.15 + 0.45 * Math.max(0, r.driftK));
+      }
       else turn = c.steer * 2.05 * handling * (1 - 0.25 * clamp(f / maxF, 0, 1));
       r.yaw -= turn * sf * dt;
       r.steer = lerp(r.steer, c.steer, 0.3);
     }
-    lat *= Math.exp(-(r.drift ? 2.4 : r.spin > 0 ? 3 : 9) * dt);
+    lat *= Math.exp(-(r.drift ? 3.6 : r.spin > 0 ? 3 : 9) * dt);
     const nfx = Math.sin(r.yaw), nfz = Math.cos(r.yaw);
     r.vx = nfx * f + -nfz * lat; r.vz = nfz * f + nfx * lat; r.f = f;
     r.x += r.vx * dt; r.z += r.vz * dt;
@@ -539,7 +545,7 @@ class Race {
     this.fxAdd.update(dt); this.fxN.update(dt);
     for (const r of this.racers) {
       const a = r.elim ? 0 : 1;
-      r.visYaw = r.yaw + (r.drift ? r.driftDir * -0.38 : 0) * 1;
+      r.visYaw = r.yaw + (r.drift ? r.driftDir * -(0.3 + 0.1 * (r.driftK || 0)) : 0);
       const vy = r.visYaw;
       const flash = r.spin > 0 && Math.floor(this.t * 12) % 2 === 0;
       r.view.update(r.x, r.y, r.z, vy, r.pitch, r.roll, r.steer, r.f, dt, { hop: r.hop * 0.6, shield: r.shield > 0, alpha: a, flash });
