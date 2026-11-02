@@ -579,7 +579,7 @@ class Race {
     h.pos.className = 'pos p' + Math.min(pl, 4);
     h.lap.textContent = `${clamp(r.lap, 1, this.laps)}/${this.laps}`;
     h.time.textContent = fmtTime(r.finished ? r.ftime : this.raceTime);
-    h.spd.textContent = Math.round(Math.abs(r.f) * 3.2);
+    h.spd.textContent = Math.round(Math.abs(r.f) * 2);
     h.boostBar.className = 'drift ' + (r.drift ? (r.charge >= 2.6 ? 'l3' : r.charge >= 1.6 ? 'l2' : r.charge >= 0.7 ? 'l1' : 'l0') : '');
     if (this.mode === 'ko') h.ko.innerHTML = `<b>${n}</b> LEFT · next knockout <b>${Math.max(0, Math.ceil(this.koNext))}s</b>`;
     // minimap
