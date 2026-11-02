@@ -189,6 +189,13 @@ kbd{background:rgba(255,255,255,.15);border-radius:5px;padding:1px 6px;font-weig
 #hFeed{position:absolute;left:14px;bottom:110px;display:flex;flex-direction:column;gap:4px;font-family:Rubik;text-transform:none;font-weight:900;font-size:14px}
 .feed{background:rgba(107,31,214,.75);padding:4px 10px;border-radius:8px;animation:tin .25s}
 #hPause{position:absolute;right:180px;top:20px;pointer-events:auto;width:44px;height:44px;border-radius:12px;background:rgba(5,10,40,.6);font-size:20px;display:grid;place-items:center}
+#hLook{position:absolute;right:232px;top:20px;pointer-events:auto;width:56px;height:44px;border-radius:12px;background:rgba(5,10,40,.6);font-size:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;touch-action:none;border:2px solid transparent}
+#hLook small{font-family:Rubik;font-size:9px;font-weight:900;margin-top:2px}
+#hLook.on{border-color:var(--yellow);background:rgba(255,225,74,.35)}
+.kb{min-width:92px;padding:7px 10px;border-radius:9px;background:rgba(0,0,0,.35);border:2px solid var(--line);font-weight:900;font-size:13px}
+.kb:hover{border-color:rgba(255,255,255,.5)}
+.kb.wait{border-color:var(--yellow);color:var(--yellow);animation:blink .8s infinite}
+@keyframes blink{50%{opacity:.5}}
 #flash{position:fixed;inset:0;z-index:7;background:#bfe8ff;opacity:0;pointer-events:none;mix-blend-mode:screen}
 #touch{position:fixed;inset:auto 0 0 0;height:180px;z-index:8;pointer-events:none}
 #touch button{position:absolute;pointer-events:auto;width:84px;height:84px;border-radius:50%;background:rgba(255,255,255,.18);border:3px solid rgba(255,255,255,.35);font-size:30px;font-family:system-ui;touch-action:none}
@@ -199,7 +206,7 @@ kbd{background:rgba(255,255,255,.15);border-radius:5px;padding:1px 6px;font-weig
 #resTitle{font-family:'Lilita One';font-size:clamp(40px,8vw,72px);text-align:center;color:var(--yellow);-webkit-text-stroke:3px #1a1033;text-shadow:0 5px 0 #1a1033;line-height:1}
 .resgrid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-top:16px}
 @media(max-height:560px){#party{max-height:calc(100% - 28px);width:250px}#playBtn{font-size:30px;padding:10px}#modeCard .mi{width:48px;height:48px}}
-@media(max-width:640px){.resgrid{grid-template-columns:1fr}#party{width:calc(100% - 28px);max-height:40%}#playBox{width:calc(100% - 36px)}#hud .pos{font-size:58px}#hItemBox{width:66px;height:66px;font-size:38px}#hMap{width:110px;height:110px}#hPause{right:120px}}
+@media(max-width:640px){#hLook{right:172px}.resgrid{grid-template-columns:1fr}#party{width:calc(100% - 28px);max-height:40%}#playBox{width:calc(100% - 36px)}#hud .pos{font-size:58px}#hItemBox{width:66px;height:66px;font-size:38px}#hMap{width:110px;height:110px}#hPause{right:120px}}
 .rrow{display:flex;gap:10px;padding:6px 8px;border-radius:8px;font-weight:700}
 .rrow.me{background:rgba(255,225,74,.2);color:var(--yellow)}
 .rrow span:first-child{width:26px;font-family:'Lilita One'}
@@ -282,6 +289,7 @@ kbd{background:rgba(255,255,255,.15);border-radius:5px;padding:1px 6px;font-weig
   <div id="hKo" class="hidden"></div>
   <div class="pos" id="hPos">1</div>
   <button id="hPause" title="Menu (Esc)">⏸</button>
+  <button id="hLook" title="Look behind (hold)">👀<small>BACK</small></button>
   <div id="hCenter"><div id="hMsg"></div><div id="hSub"></div></div>
   <div id="hFeed"></div>
   <div id="hSpdBox"><span id="hSpd">0</span><small>mph</small><div class="drift" id="hDrift"></div></div>
@@ -294,6 +302,7 @@ kbd{background:rgba(255,255,255,.15);border-radius:5px;padding:1px 6px;font-weig
   <button data-k="brake" style="right:108px;bottom:22px;width:72px;height:72px">⬇</button>
   <button data-k="gas" style="right:16px;bottom:60px">⬆</button>
   <button data-k="item" style="right:24px;bottom:160px;width:70px;height:70px">🎁</button>
+  <button data-k="look" style="left:30px;bottom:130px;width:62px;height:62px;font-size:24px">👀</button>
 </div>
 
 <div id="results" class="hidden"><div class="mbox">

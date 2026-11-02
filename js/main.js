@@ -120,7 +120,9 @@ const App = window.App = {
     $('resOk').onclick = () => this.exitRace();
     $('resAgain').onclick = () => { const c = this.lastCfg; this.exitRace(true); if (c && (!c.multi || Net.isLeader())) this.play(); };
     $('hPause').onclick = () => this.pauseMenu();
-    addEventListener('keydown', e => { if (e.code === 'Escape') { if (!$('modal').classList.contains('hidden')) { if (this.race) { this.closeModal(); this.paused = false; } else this.closeModal(); } else if (this.race && !this.race.resultsShown) this.pauseMenu(); } });
+    { const lb = $('hLook'); const on = e => { e.preventDefault(); Input.touch.look = 1; lb.classList.add('on'); }; const off = () => { Input.touch.look = 0; lb.classList.remove('on'); };
+      lb.addEventListener('pointerdown', on); ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => lb.addEventListener(ev, off)); lb.addEventListener('contextmenu', e => e.preventDefault()); }
+    addEventListener('keydown', e => { if (Input.capturing) return; if (this.race && !this.race.resultsShown && Input.binds.pause.includes(e.code) && $('modal').classList.contains('hidden')) { this.pauseMenu(); return; } if (e.code === 'Escape') { if (!$('modal').classList.contains('hidden')) { if (this.race) { this.closeModal(); this.paused = false; } else this.closeModal(); } else if (this.race && !this.race.resultsShown) this.pauseMenu(); } });
     $('modal').addEventListener('pointerdown', e => { if (e.target === $('modal') && !this._modalLocked) { this.closeModal(); this.paused = false; } });
     // drag-to-rotate lobby kart
     let drag = null; const cv = $('gl');
@@ -182,11 +184,7 @@ const App = window.App = {
       <div class="set"><div><b>Graphics</b><div class="muted">Low runs better on Chromebooks</div></div>${seg('quality', [['high', 'High'], ['low', 'Low']])}</div>
       <div class="set"><div><b>Bot difficulty</b></div>${seg('difficulty', [['easy', 'Easy'], ['normal', 'Normal'], ['hard', 'Hard']])}</div>
       <div class="set"><div><b>Sound</b></div>${seg('muted', [[false, 'On'], [true, 'Off']])}</div>
-      <div class="set" style="display:block"><b>Controls</b><div class="keys">
-        <span><kbd>W</kbd>/<kbd>↑</kbd></span><span>Accelerate</span><span><kbd>S</kbd>/<kbd>↓</kbd></span><span>Brake / reverse</span>
-        <span><kbd>A</kbd><kbd>D</kbd>/<kbd>←</kbd><kbd>→</kbd></span><span>Steer</span><span><kbd>Space</kbd>/<kbd>Shift</kbd></span><span>Hold while turning to drift — release for a boost (blue → orange → purple)</span>
-        <span><kbd>E</kbd>/<kbd>Enter</kbd></span><span>Use item</span><span><kbd>C</kbd></span><span>Look behind</span><span><kbd>H</kbd></span><span>Horn</span><span><kbd>Esc</kbd></span><span>Menu</span></div>
-        <p class="muted" style="margin-top:8px">Gamepads and touch screens work too. Tip: press gas right as the "2" fades for a rocket start!</p></div>
+      <div class="set"><div><b>Controls</b><div class="muted">Change any key. Gamepads and touch screens work too.</div></div><button class="btn sm b" id="keysBtn">Keybinds</button></div>
       <div class="set"><div><b>Transfer progress</b><div class="muted">Copy your save code, paste it on another device</div></div><button class="btn sm" id="xfer">Open</button></div>
       <div class="set" style="border:0"><span class="muted">Saved on this device${Net.online ? ' · multiplayer ready' : ''}</span><button class="btn y" id="setOk">Done</button></div>`);
     $('xfer').onclick = () => this.transferModal();
@@ -195,6 +193,7 @@ const App = window.App = {
       sg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === bt));
       if (k === 'muted') Sfx.setMuted(v); if (k === 'quality') this.R.pixelRatio = v === 'low' ? 1 : Math.min(devicePixelRatio || 1, 1.5);
     }));
+    $('keysBtn').onclick = () => this.keysModal();
     $('chTag').onclick = () => this.tagModal(false); $('setOk').onclick = () => { this.closeModal(); if (this.race) this.paused = false; };
   },
   transferModal() {
@@ -209,6 +208,28 @@ const App = window.App = {
     $('xCopy').onclick = () => { $('xOut').select(); (navigator.clipboard ? navigator.clipboard.writeText(code) : Promise.reject()).then(() => this.toast('Save code copied!'), () => { try { document.execCommand('copy'); this.toast('Save code copied!'); } catch (e) { } }); };
     $('xClose').onclick = () => this.closeModal();
     $('xLoad').onclick = () => { try { Account.importCode($('xIn').value); this.closeModal(); this.refreshTop(); this.lobbyKarts(); this.renderParty(); this.renderPlay(); Net.setParty(); this.toast('✔ Progress loaded — welcome back, <b>' + esc(Account.profile.tag) + '</b>!'); } catch (e) { this.toast('That save code is not valid.'); } };
+  },
+  keysModal() {
+    const draw = () => {
+      const b = this.modal(`<h3>Keybinds</h3><p class="muted" style="margin-bottom:10px">Click a key box, then press the key you want. <kbd>Backspace</kbd> clears it, <kbd>Esc</kbd> cancels. Each key can only do one thing.</p>
+        <div id="kbList">${KEY_ACTIONS.map(a => `<div class="set"><b>${a.name}</b><div class="row" style="gap:6px">${[0, 1].map(i => `<button class="kb" data-a="${a.id}" data-i="${i}">${esc(keyLabel(Input.binds[a.id][i]))}</button>`).join('')}</div></div>`).join('')}</div>
+        <p class="muted" style="margin-top:10px"><kbd>Esc</kbd> always opens the menu during a race. Tip: press gas right as the "2" fades for a rocket start!</p>
+        <div class="row" style="justify-content:space-between;margin-top:14px"><button class="btn sm r" id="kbReset">Reset to default</button><div class="row"><button class="btn" id="kbBack">Back</button><button class="btn y" id="kbDone">Done</button></div></div>`, true);
+      b.querySelectorAll('.kb').forEach(btn => btn.onclick = () => {
+        b.querySelectorAll('.kb').forEach(x => x.classList.remove('wait')); btn.classList.add('wait'); btn.textContent = 'Press a key…';
+        Input.capturing = true;
+        const h = e => {
+          e.preventDefault(); e.stopPropagation(); removeEventListener('keydown', h, true); Input.capturing = false;
+          if (e.code === 'Escape') { draw(); return; }
+          Input.setBind(btn.dataset.a, +btn.dataset.i, e.code === 'Backspace' ? '' : e.code); Sfx.play('click'); draw();
+        };
+        addEventListener('keydown', h, true);
+      });
+      $('kbReset').onclick = () => { Input.resetBinds(); draw(); this.toast('Keybinds reset'); };
+      $('kbBack').onclick = () => this.settingsModal();
+      $('kbDone').onclick = () => { this.closeModal(); if (this.race) this.paused = false; };
+    };
+    draw();
   },
   // ---------------- play / modes ----------------
   trackThumb(id) {
@@ -269,7 +290,8 @@ const App = window.App = {
     Input.inRace = true; this.paused = false;
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     $('touch').classList.toggle('hidden', !this.touch);
-    $('hItemKey').textContent = this.touch ? '' : 'E / Enter to use';
+    $('hItemKey').textContent = this.touch ? '' : Input.label('item') + ' to use';
+    $('hLook').title = 'Look behind (hold) — ' + Input.label('look');
     try {
       this.race = new Race(this, Object.assign({}, cfg, { racers, host: isHost, net: cfg.multi ? Net : null }));
       

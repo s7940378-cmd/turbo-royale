@@ -1,35 +1,69 @@
 // Turbo Royale — input + audio
 'use strict';
+const KEY_ACTIONS = [
+  { id: 'gas', name: 'Accelerate', def: ['KeyW', 'ArrowUp'] },
+  { id: 'brake', name: 'Brake / reverse', def: ['KeyS', 'ArrowDown'] },
+  { id: 'left', name: 'Steer left', def: ['KeyA', 'ArrowLeft'] },
+  { id: 'right', name: 'Steer right', def: ['KeyD', 'ArrowRight'] },
+  { id: 'drift', name: 'Drift (hold)', def: ['Space', 'ShiftLeft'] },
+  { id: 'item', name: 'Use item', def: ['KeyE', 'Enter'] },
+  { id: 'look', name: 'Look behind (hold)', def: ['KeyC', 'KeyR'] },
+  { id: 'horn', name: 'Horn', def: ['KeyH', ''] },
+  { id: 'pause', name: 'Pause / menu', def: ['KeyP', ''] },
+];
+function keyLabel(code) {
+  if (!code) return '—';
+  const m = { Space: 'Space', ShiftLeft: 'L-Shift', ShiftRight: 'R-Shift', ControlLeft: 'L-Ctrl', ControlRight: 'R-Ctrl', AltLeft: 'L-Alt', AltRight: 'R-Alt', ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→', Enter: 'Enter', Backspace: 'Backspace', Tab: 'Tab', CapsLock: 'Caps', Slash: '/', Period: '.', Comma: ',', Semicolon: ';', Quote: "'", BracketLeft: '[', BracketRight: ']', Minus: '-', Equal: '=', Backquote: '`', Backslash: '\\' };
+  if (m[code]) return m[code];
+  if (code.startsWith('Key')) return code.slice(3);
+  if (code.startsWith('Digit')) return code.slice(5);
+  if (code.startsWith('Numpad')) return 'Num ' + code.slice(6);
+  return code;
+}
 const Input = (() => {
   const keys = new Set(); const pressed = new Set();
-  const touch = { left: 0, right: 0, gas: 0, brake: 0, drift: 0, item: 0 };
+  const touch = { left: 0, right: 0, gas: 0, brake: 0, drift: 0, item: 0, look: 0 };
+  let binds = {};
+  const load = () => { let saved = {}; try { saved = JSON.parse(localStorage.getItem('tr_keys') || '{}'); } catch (e) { }
+    binds = {}; for (const a of KEY_ACTIONS) { const v = saved[a.id]; binds[a.id] = Array.isArray(v) && v.length === 2 ? v.map(x => typeof x === 'string' ? x : '') : a.def.slice(); } };
+  load();
   const isTyping = () => { const a = document.activeElement; return a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA'); };
+  const gameKey = code => KEY_ACTIONS.some(a => binds[a.id].includes(code));
   addEventListener('keydown', e => {
-    if (isTyping()) return;
+    if (isTyping() || Input.capturing) return;
     if (!keys.has(e.code)) pressed.add(e.code);
     keys.add(e.code);
-    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code) && Input.inRace) e.preventDefault();
+    if (Input.inRace && (gameKey(e.code) || ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code))) e.preventDefault();
   });
   addEventListener('keyup', e => keys.delete(e.code));
   addEventListener('blur', () => keys.clear());
-  let gp = null;
   function pad() { const ps = navigator.getGamepads ? navigator.getGamepads() : []; for (const p of ps) if (p) return p; return null; }
+  const on = id => binds[id].some(k => k && keys.has(k));
   return {
-    inRace: false, touch,
+    inRace: false, touch, capturing: false,
+    get binds() { return binds; },
+    setBind(id, slot, code) {
+      if (code) for (const a of KEY_ACTIONS) binds[a.id] = binds[a.id].map(k => k === code ? '' : k); // a key does one thing
+      binds[id][slot] = code || '';
+      try { localStorage.setItem('tr_keys', JSON.stringify(binds)); } catch (e) { }
+    },
+    resetBinds() { try { localStorage.removeItem('tr_keys'); } catch (e) { } load(); },
+    label(id) { const k = binds[id].filter(Boolean).map(keyLabel); return k.length ? k.join(' / ') : 'unbound'; },
+    hitAction(id) { return binds[id].some(k => k && pressed.has(k)); },
     down(...c) { return c.some(k => keys.has(k)); },
-    hit(...c) { const r = c.some(k => pressed.has(k)); return r; },
-    endFrame() { pressed.clear(); this._padPrev = this._padNow; },
+    hit(...c) { return c.some(k => pressed.has(k)); },
+    endFrame() { pressed.clear(); },
     read() {
-      const p = pad(); let ps = 0, pg = 0, pb = 0, pd = 0, pi = 0;
-      if (p) { ps = Math.abs(p.axes[0]) > 0.15 ? p.axes[0] : 0; pg = (p.buttons[7] && p.buttons[7].value) || (p.buttons[0] && p.buttons[0].pressed ? 1 : 0); pb = (p.buttons[6] && p.buttons[6].value) || (p.buttons[1] && p.buttons[1].pressed ? 1 : 0); pd = (p.buttons[5] && p.buttons[5].pressed) || (p.buttons[4] && p.buttons[4].pressed) ? 1 : 0; pi = p.buttons[2] && p.buttons[2].pressed ? 1 : 0; }
-      const L = this.down('KeyA', 'ArrowLeft') || touch.left, Rr = this.down('KeyD', 'ArrowRight') || touch.right;
+      const p = pad(); let ps = 0, pg = 0, pb = 0, pd = 0, pi = 0, pl = 0;
+      if (p) { ps = Math.abs(p.axes[0]) > 0.15 ? p.axes[0] : 0; pg = (p.buttons[7] && p.buttons[7].value) || (p.buttons[0] && p.buttons[0].pressed ? 1 : 0); pb = (p.buttons[6] && p.buttons[6].value) || (p.buttons[1] && p.buttons[1].pressed ? 1 : 0); pd = (p.buttons[5] && p.buttons[5].pressed) || (p.buttons[4] && p.buttons[4].pressed) ? 1 : 0; pi = p.buttons[2] && p.buttons[2].pressed ? 1 : 0; pl = p.buttons[3] && p.buttons[3].pressed ? 1 : 0; }
+      const L = on('left') || touch.left, Rr = on('right') || touch.right;
       const steer = clamp((Rr ? 1 : 0) - (L ? 1 : 0) + ps, -1, 1);
-      const gas = Math.max(this.down('KeyW', 'ArrowUp') || touch.gas ? 1 : 0, pg);
-      const brake = Math.max(this.down('KeyS', 'ArrowDown') || touch.brake ? 1 : 0, pb);
-      const drift = this.down('Space', 'ShiftLeft', 'ShiftRight') || touch.drift || pd;
-      const itemNow = this.down('KeyE', 'Enter', 'KeyF') || touch.item || pi;
+      const gas = Math.max(on('gas') || touch.gas ? 1 : 0, pg);
+      const brake = Math.max(on('brake') || touch.brake ? 1 : 0, pb);
+      const drift = on('drift') || touch.drift || pd;
+      const itemNow = on('item') || touch.item || pi;
       const item = itemNow && !this._itemPrev; this._itemPrev = itemNow;
-      return { steer, gas, brake, drift: !!drift, item: !!item, look: this.down('KeyC', 'KeyR'), horn: this.hit('KeyH') };
+      return { steer, gas, brake, drift: !!drift, item: !!item, look: !!(on('look') || touch.look || pl), horn: this.hitAction('horn') };
     },
   };
 })();
