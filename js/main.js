@@ -184,6 +184,7 @@ const App = window.App = {
       <div class="set"><div><b>Graphics</b><div class="muted">Low runs better on Chromebooks</div></div>${seg('quality', [['high', 'High'], ['low', 'Low']])}</div>
       <div class="set"><div><b>Bot difficulty</b></div>${seg('difficulty', [['easy', 'Easy'], ['normal', 'Normal'], ['hard', 'Hard']])}</div>
       <div class="set"><div><b>Sound</b></div>${seg('muted', [[false, 'On'], [true, 'Off']])}</div>
+      <div class="set"><div><b>Redeem code</b><div class="muted">Got a code? Enter it for rewards</div></div><button class="btn sm g" id="redeemBtn">Redeem</button></div>
       <div class="set"><div><b>Controls</b><div class="muted">Change any key. Gamepads and touch screens work too.</div></div><button class="btn sm b" id="keysBtn">Keybinds</button></div>
       <div class="set"><div><b>Transfer progress</b><div class="muted">Copy your save code, paste it on another device</div></div><button class="btn sm" id="xfer">Open</button></div>
       <div class="set" style="border:0"><span class="muted">Saved on this device${Net.online ? ' · multiplayer ready' : ''}</span><button class="btn y" id="setOk">Done</button></div>`);
@@ -194,6 +195,7 @@ const App = window.App = {
       if (k === 'muted') Sfx.setMuted(v); if (k === 'quality') this.R.pixelRatio = v === 'low' ? 1 : Math.min(devicePixelRatio || 1, 1.5);
     }));
     $('keysBtn').onclick = () => this.keysModal();
+    $('redeemBtn').onclick = () => this.redeemModal();
     $('chTag').onclick = () => this.tagModal(false); $('setOk').onclick = () => { this.closeModal(); if (this.race) this.paused = false; };
   },
   transferModal() {
@@ -208,6 +210,22 @@ const App = window.App = {
     $('xCopy').onclick = () => { $('xOut').select(); (navigator.clipboard ? navigator.clipboard.writeText(code) : Promise.reject()).then(() => this.toast('Save code copied!'), () => { try { document.execCommand('copy'); this.toast('Save code copied!'); } catch (e) { } }); };
     $('xClose').onclick = () => this.closeModal();
     $('xLoad').onclick = () => { try { Account.importCode($('xIn').value); this.closeModal(); this.refreshTop(); this.lobbyKarts(); this.renderParty(); this.renderPlay(); Net.setParty(); this.toast('✔ Progress loaded — welcome back, <b>' + esc(Account.profile.tag) + '</b>!'); } catch (e) { this.toast('That save code is not valid.'); } };
+  },
+  redeemModal() {
+    this.modal(`<h3>Redeem code</h3><div class="row"><input class="inp" id="rcIn" maxlength="24" placeholder="ENTER CODE"><button class="btn y" id="rcOk">Redeem</button></div>
+      <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn" id="rcBack">Back</button></div>`);
+    const inp = $('rcIn'); setTimeout(() => inp.focus(), 50);
+    const CODES = { 889511634: { coins: 5000 } }; // stored as hashes
+    const go = () => {
+      const code = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); if (!code) return;
+      const h = hashStr('code:' + code), r = CODES[h], p = Account.profile; p.redeemed = p.redeemed || [];
+      if (!r) { this.toast('That code is not valid.'); inp.select(); return; }
+      if (p.redeemed.includes(h)) { this.toast('You already redeemed that code.'); return; }
+      p.redeemed.push(h); p.coins += r.coins; Account.save(); Sfx.play('buy'); this.refreshTop(); this.closeModal();
+      this.toast(`🎉 Code redeemed! <b>+${r.coins.toLocaleString()}</b> Kart Coins`, 5000);
+    };
+    $('rcOk').onclick = go; inp.onkeydown = e => { if (e.key === 'Enter') go(); };
+    $('rcBack').onclick = () => this.settingsModal();
   },
   keysModal() {
     const draw = () => {
