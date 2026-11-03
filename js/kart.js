@@ -98,14 +98,87 @@ const KartFactory = (() => {
       g.sphere(0.2, 8, 6, hexc(0xffd23a), 0.45, 1.05, 0.75); g.box(0.12, 0.06, 0.12, hexc(0xff8a1c), 0.45, 1.06, 0.95);
       drvZ = -0.2;
     }
+    if (body === 'formula') {
+      g.box(0.7, 0.3, 3.0, P.a, 0, 0.4, 0.1); // monocoque
+      g.wedge(0.55, 0.28, 1.2, P.a, 0, 0.35, 1.9, 0.08); // nose
+      g.box(2.1, 0.08, 0.45, P.pat === 'two' ? P.b : P.a, 0, 0.3, 2.35); // front wing
+      g.box(0.08, 0.3, 0.45, P.b, -1.02, 0.42, 2.35); g.box(0.08, 0.3, 0.45, P.b, 1.02, 0.42, 2.35);
+      g.box(0.45, 0.32, 1.3, P.a, -0.55, 0.42, -0.35); g.box(0.45, 0.32, 1.3, P.a, 0.55, 0.42, -0.35); // sidepods
+      stripe(0.18, 0.05, 2.6, 0, 0.56, 0.4);
+      g.box(0.6, 0.45, 0.45, SEAT, 0, 0.7, -0.45);
+      g.box(0.5, 0.55, 0.9, DARK, 0, 0.75, -1.15); // engine cover
+      g.box(1.6, 0.08, 0.5, P.pat === 'two' ? P.b : P.a, 0, 1.35, -1.65); g.box(0.08, 0.6, 0.5, DARK, -0.6, 1.05, -1.65); g.box(0.08, 0.6, 0.5, DARK, 0.6, 1.05, -1.65);
+      g.cyl(0.05, 0.6, 5, DARK, 'x', 0, 0.42, 1.25); g.cyl(0.05, 0.6, 5, DARK, 'x', 0, 0.42, -1.2); // suspension arms
+      g.cyl(0.14, 0.04, 8, BLACK, 'z', 0, 0.85, 0.25);
+      wheelPos = [[-0.95, 0.4, 1.3], [0.95, 0.4, 1.3], [-0.95, 0.45, -1.2], [0.95, 0.45, -1.2]]; drvZ = -0.3;
+    } else if (body === 'truck') {
+      g.box(1.7, 0.35, 2.8, DARK, 0, 0.7, 0); // frame
+      g.box(1.6, 0.55, 1.1, P.a, 0, 1.15, 0.85); // hood
+      g.box(1.6, 0.85, 0.9, P.a, 0, 1.3, -0.1); // cab
+      g.box(1.4, 0.5, 0.05, hexc(0x8fd8ff, 0.3), 0, 1.45, 0.36); // windshield
+      g.box(1.7, 0.5, 1.0, P.pat === 'two' ? P.b : P.a, 0, 1.1, -1.1); g.box(1.5, 0.2, 0.9, DARK, 0, 1.3, -1.1); // bed
+      stripe(1.62, 0.12, 0.1, 0, 1.3, 1.42);
+      g.box(1.8, 0.25, 0.25, GREY, 0, 0.8, 1.45); g.box(0.3, 0.15, 0.05, hexc(0xfff6c0, 0.9), -0.55, 1.15, 1.41); g.box(0.3, 0.15, 0.05, hexc(0xfff6c0, 0.9), 0.55, 1.15, 1.41);
+      g.box(1.2, 0.12, 0.15, hexc(0xffd23a, 0.7), 0, 1.8, -0.1); // roof lights
+      wheelPos = [[-0.95, 0.5, 0.95], [0.95, 0.5, 0.95], [-0.95, 0.5, -0.95], [0.95, 0.5, -0.95]]; drvZ = -0.05;
+    } else if (body === 'jet') {
+      g.box(1.2, 0.25, 2.4, DARK, 0, 0.35, 0.1);
+      g.wedge(1.0, 0.4, 1.0, P.a, 0, 0.45, 1.0, 0.1);
+      g.cyl(0.55, 1.7, 12, P.a, 'z', 0, 0.85, -0.85, P.a); // jet turbine
+      g.cyl(0.42, 0.1, 12, BLACK, 'z', 0, 0.85, 0.05); g.cyl(0.45, 0.12, 12, hexc(0xffa020, 1), 'z', 0, 0.85, -1.72); // intake / glow
+      g.cyl(0.6, 0.25, 12, P.pat === 'two' ? P.b : hexc(0xc0c4c8), 'z', 0, 0.85, -1.5);
+      stripe(0.2, 0.05, 1.4, 0, 1.42, -0.85);
+      for (const sx of [-1, 1]) g.box(0.9, 0.06, 0.6, P.pat === 'two' ? P.b : P.a, sx * 0.9, 0.7, -0.9); // stubby wings
+      g.box(0.7, 0.4, 0.4, SEAT, 0, 0.6, 0.35);
+      drvZ = 0.3; wheelPos = [[-0.8, 0.36, 1.0], [0.8, 0.36, 1.0], [-0.85, 0.38, -0.8], [0.85, 0.38, -0.8]];
+    } else if (body === 'bug') {
+      g.box(1.3, 0.25, 2.0, DARK, 0, 0.35, 0);
+      g.sphere(0.95, 12, 8, P.a, 0, 0.75, 0.15, 0.7); // round body
+      g.sphere(0.45, 8, 6, P.pat === 'two' ? P.b : P.a, -0.55, 0.55, 0.85, 0.8); g.sphere(0.45, 8, 6, P.pat === 'two' ? P.b : P.a, 0.55, 0.55, 0.85, 0.8); // fenders
+      g.sphere(0.13, 6, 4, hexc(0xfff6c0, 0.9), -0.45, 0.65, 1.2); g.sphere(0.13, 6, 4, hexc(0xfff6c0, 0.9), 0.45, 0.65, 1.2);
+      stripe(0.25, 0.06, 1.2, 0, 1.4, 0.15);
+      g.box(0.8, 0.4, 0.4, SEAT, 0, 1.05, -0.4);
+      wheelPos = [[-0.75, 0.32, 0.75], [0.75, 0.32, 0.75], [-0.75, 0.32, -0.7], [0.75, 0.32, -0.7]]; drvZ = -0.35;
+    } else if (body === 'shark') {
+      const belly = hexc(0xeef2f6);
+      g.box(1.3, 0.25, 2.6, belly, 0, 0.35, 0);
+      g.wedge(1.4, 0.55, 1.4, P.a, 0, 0.45, 0.75, 0.12); // snout
+      g.box(1.4, 0.45, 1.3, P.a, 0, 0.65, -0.6);
+      for (let k = 0; k < 3; k++) g.box(0.04, 0.22, 0.06, hexc(0x1b1b1b), -0.72, 0.6, 0.2 - k * 0.15); // gills
+      for (let k = 0; k < 3; k++) g.box(0.04, 0.22, 0.06, hexc(0x1b1b1b), 0.72, 0.6, 0.2 - k * 0.15);
+      g.push(M4.trs(0, 0.85, -0.55, 0, 0, 0)); g.wedge(0.12, 0.9, 0.9, P.a, 0, 0, 0, 0); g.pop(); // dorsal fin
+      g.push(M4.trs(0, 0.75, -1.4, 0, 0, 0)); g.wedge(0.1, 0.8, 0.5, P.pat === 'two' ? P.b : P.a, 0, -0.2, 0, 0.3); g.pop(); // tail
+      g.box(1.0, 0.04, 0.2, hexc(0xffffff), 0, 0.5, 1.48); // teeth
+      g.sphere(0.08, 5, 4, hexc(0x111111), -0.55, 0.8, 1.05); g.sphere(0.08, 5, 4, hexc(0x111111), 0.55, 0.8, 1.05);
+      g.box(0.8, 0.4, 0.4, SEAT, 0, 0.95, 0.05);
+      drvZ = 0.05;
+    } else if (body === 'roadster') {
+      g.box(1.6, 0.45, 2.9, P.a, 0, 0.5, 0);
+      g.box(1.5, 0.15, 1.1, P.pat === 'two' ? P.b : P.a, 0, 0.78, 0.85); // long hood
+      g.box(1.7, 0.18, 0.2, hexc(0xe8eef4, 0.35), 0, 0.42, 1.47); g.box(1.7, 0.18, 0.2, hexc(0xe8eef4, 0.35), 0, 0.42, -1.47); // chrome bumpers
+      for (const sx of [-1, 1]) { g.push(M4.trs(sx * 0.7, 0.75, -1.15, 0, 0, 0)); g.wedge(0.12, 0.5, 0.7, P.a, 0, 0, 0, 0); g.pop(); g.sphere(0.07, 5, 4, hexc(0xff3030, 1), sx * 0.7, 0.8, -1.45); } // tail fins
+      g.box(1.3, 0.35, 0.05, hexc(0x8fd8ff, 0.3), 0, 1.0, 0.25); // windscreen
+      stripe(1.62, 0.06, 0.12, 0, 0.74, 0);
+      g.box(1.0, 0.45, 0.45, hexc(0xfff3d6), 0, 0.9, -0.45); // bench seat
+      g.sphere(0.13, 6, 4, hexc(0xfff6c0, 0.9), -0.55, 0.7, 1.45); g.sphere(0.13, 6, 4, hexc(0xfff6c0, 0.9), 0.55, 0.7, 1.45);
+      wheelPos = [[-0.85, 0.38, 1.0], [0.85, 0.38, 1.0], [-0.85, 0.38, -0.95], [0.85, 0.38, -0.95]]; drvZ = -0.4;
+    }
     driver(g, cos.driver, drvZ);
     // wheels
     const wk = (CAT[cos.wheels] || CAT.w_stock).kind;
     const wg = new Geo(); let wr = 0.38, ww = 0.32;
     if (wk === 'monster') { wr = 0.52; ww = 0.42; wheelPos = wheelPos.map(p => [p[0] * 1.08, 0.52, p[2]]); }
+    if (wk === 'mini') { wr = 0.28; ww = 0.26; wheelPos = wheelPos.map(p => [p[0], p[1] - 0.1, p[2]]); }
+    if (wk === 'knobby') { wr = 0.44; ww = 0.36; wheelPos = wheelPos.map(p => [p[0] * 1.04, p[1] + 0.06, p[2]]); }
+    if (wk === 'slick') { ww = 0.4; }
     if (wheelPos.length) {
-      wg.cyl(wr, ww, 12, BLACK, 'x', 0, 0, 0, BLACK);
-      const rim = wk === 'chrome' ? hexc(0xe8eef4, 0.35) : wk === 'neon' ? hexc(0x2bf0ff, 1) : wk === 'gold' ? hexc(0xffc928, 0.3) : wk === 'candy' ? hexc(0xff4fa3, 0.2) : wk === 'monster' ? hexc(0xff3b3b) : hexc(0xb8bec6);
+      if (wk === 'cyber') wg.cyl(wr, ww, 16, hexc(0x1a1030, 0.2), 'x', 0, 0, 0, hexc(0xc25cff, 1));
+      else if (wk === 'wood') wg.cyl(wr, ww * 0.5, 12, hexc(0x6b4a2a), 'x', 0, 0, 0, hexc(0x8a5f36));
+      else wg.cyl(wr, ww, 12, BLACK, 'x', 0, 0, 0, BLACK);
+      if (wk === 'knobby') for (let k = 0; k < 10; k++) { const an = k / 10 * Math.PI * 2; wg.box(ww + 0.04, 0.09, 0.09, BLACK, 0, Math.cos(an) * wr, Math.sin(an) * wr); }
+      if (wk === 'wood') for (let k = 0; k < 6; k++) { wg.push(M4.trs(0, 0, 0, 0, k / 6 * Math.PI, 0)); wg.box(ww * 0.4, wr * 1.8, 0.05, hexc(0x8a5f36), 0, 0, 0); wg.pop(); }
+      if (wk === 'slick') wg.cyl(wr * 1.002, 0.05, 12, hexc(0xffd23a, 0.4), 'x', 0, 0, 0);
+      const rim = wk === 'cyber' ? hexc(0xc25cff, 1) : wk === 'wood' ? hexc(0x8a5f36) : wk === 'slick' ? hexc(0x2a2f3a) : wk === 'mini' ? hexc(0xffd23a) : wk === 'knobby' ? hexc(0x4a5560) : wk === 'chrome' ? hexc(0xe8eef4, 0.35) : wk === 'neon' ? hexc(0x2bf0ff, 1) : wk === 'gold' ? hexc(0xffc928, 0.3) : wk === 'candy' ? hexc(0xff4fa3, 0.2) : wk === 'monster' ? hexc(0xff3b3b) : hexc(0xb8bec6);
       wg.cyl(wr * 0.6, ww + 0.04, 8, rim, 'x', 0, 0, 0, rim);
       if (wk === 'candy') wg.box(ww + 0.06, wr * 1.1, 0.1, hexc(0xffffff, 0.3), 0, 0, 0);
       else wg.box(ww + 0.06, wr * 1.1, 0.08, wk === 'neon' ? hexc(0xff2bd6, 1) : shade(rim, 0.6), 0, 0, 0);

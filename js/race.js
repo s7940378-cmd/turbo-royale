@@ -6,7 +6,7 @@ class Racer {
   constructor(o, race) {
     Object.assign(this, { id: o.id, name: o.name, type: o.type, cos: Object.assign({}, DEFAULT_EQUIP, o.cos || {}), human: o.type !== 'bot' });
     this.local = o.type === 'local'; this.bot = o.type === 'bot'; this.remote = o.type === 'remote';
-    const body = CAT[this.cos.body] || CAT.b_classic; this.stats = body.stats || [1, 1, 1];
+    const ks = kartStats(this.cos); this.stats = ks.s; this.offroadOK = ks.offroad; const eng = CAT[this.cos.engine]; this.flameCol = eng && eng.flame ? hexc(eng.flame) : null;
     this.x = 0; this.y = 0; this.z = 0; this.yaw = 0; this.vx = 0; this.vz = 0; this.f = 0; this.steer = 0; this.lat = 0;
     this.idx = 0; this.lap = 0; this.cp = false; this.prog = 0; this.finished = false; this.ftime = 0; this.place = 0;
     this.item = null; this.itemN = 0; this.rolling = 0; this.boost = 0; this.spin = 0; this.shield = 0; this.slow = 0;
@@ -167,7 +167,7 @@ class Race {
     let f = r.vx * fx + r.vz * fz, lat = r.vx * rx + r.vz * rz;
     const offroad = Math.abs(r.lat) > t.half + 1.4;
     if (r.slow > 0) { r.slow -= dt; maxF *= 0.65; }
-    if (offroad && r.boost <= 0 && !r.out) maxF *= 0.5;
+    if (offroad && r.boost <= 0 && !r.out) maxF *= r.offroadOK ? 0.78 : 0.5;
     if (r.padCd > 0) r.padCd -= dt;
     r.hop = Math.max(0, r.hop - dt * 2.5);
     if (!racing) { f *= 1 - 3 * dt; lat *= 1 - 5 * dt; }
@@ -195,7 +195,7 @@ class Race {
       if (c.drift && !r.drift && Math.abs(c.steer) > 0.25 && f > 14 && !offroad) { r.drift = true; r.driftDir = Math.sign(c.steer); r.charge = 0; r.hop = 0.35; r.driftK = 0; }
       if (r.drift && (!c.drift || f < 9)) {
         if (f >= 9 && r.charge >= 0.7) {
-          const lvl = r.charge >= 2.6 ? 3 : r.charge >= 1.6 ? 2 : 1; r.boost = Math.max(r.boost, [0, 0.55, 1.0, 1.6][lvl]);
+          const lvl = r.charge >= 2.6 ? 3 : r.charge >= 1.6 ? 2 : 1; r.boost = Math.max(r.boost, [0, 0.55, 1.0, 1.6][lvl] * st[3]);
           if (r.local) { Sfx.play('mini', lvl); this.stats.driftboost++; if (lvl === 3) this.stats.purple++; }
         }
         r.drift = false; r.charge = 0;
@@ -353,7 +353,7 @@ class Race {
     for (const p of this.pads) {
       if (r.padCd > 0) continue;
       const al = t.along(p.i, r.x, r.z), lt = t.lateral(p.i, r.x, r.z);
-      if (Math.abs(al) < 3.2 && Math.abs(lt - p.lat) < 2.4) { r.boost = Math.max(r.boost, 1.0); r.padCd = 1; if (r.local) { Sfx.play('boost'); this.stats.pad++; } }
+      if (Math.abs(al) < 3.2 && Math.abs(lt - p.lat) < 2.4) { r.boost = Math.max(r.boost, 1.0 * r.stats[3]); r.padCd = 1; if (r.local) { Sfx.play('boost'); this.stats.pad++; } }
     }
     for (const s of this.slicks) {
       if (s.dead || r.torp > 0 || (s.owner === r.id && s.age < 0.6)) continue;
@@ -379,7 +379,7 @@ class Race {
     const it = r.item;
     if (r.local) this.stats.itemuse++;
     if (it === 'torpedo') { r.torp = 6.5; r.torpLane = r.lat; r.spin = 0; r.boost = 0; if (r.local || this._near(r)) { Sfx.play('boost'); Sfx.play('rocket'); } if (r.local) this.msg('', 'TORPEDO!', 1.2); }
-    else if (it === 'nitro' || it === 'nitro3') { r.boost = Math.max(r.boost, 1.3); if (r.local) Sfx.play('boost'); }
+    else if (it === 'nitro' || it === 'nitro3') { r.boost = Math.max(r.boost, 1.3 * r.stats[3]); if (r.local) Sfx.play('boost'); }
     else if (it === 'shield') { r.shield = 8; if (r.local) Sfx.play('shield'); }
     else if (it === 'rocket') {
       const ahead = this.racers.filter(o => !o.elim && !o.finished && o.prog > r.prog).sort((a, b) => a.prog - b.prog)[0];
@@ -550,7 +550,7 @@ class Race {
       if (Math.random() < 0.3) { const p = back(r.driftDir * 0.85, 0.1); this.fxN.emit(p[0], p[1], p[2], 0, 1, 0, [0.8, 0.8, 0.8, 0.35], 1.2, 0.8, 2); }
     }
     if (r.torp > 0) { for (let q = 0; q < 3; q++) { const p = back((Math.random() - 0.5) * 0.8, 1.0); this.fxAdd.emit(p[0] - fx * 1.6, p[1], p[2] - fz * 1.6, -fx * 14 + (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 2, -fz * 14 + (Math.random() - 0.5) * 3, [1, 0.45 + Math.random() * 0.4, 0.1, 1], 1.4, 0.22, -2); } this.fxN.emit(r.x - fx * 4, r.y + 1, r.z - fz * 4, 0, 1.5, 0, [0.75, 0.75, 0.8, 0.45], 1.6, 1.0, 3); }
-    if (r.boost > 0) { for (const s of [-0.3, 0.3]) { const p = back(s, 0.7); this.fxAdd.emit(p[0], p[1], p[2], -fx * 10 + (Math.random() - 0.5) * 2, Math.random(), -fz * 10 + (Math.random() - 0.5) * 2, [1, 0.5 + Math.random() * 0.4, 0.15, 1], 0.75, 0.16, -1.5); } }
+    if (r.boost > 0) { for (const s of [-0.3, 0.3]) { const p = back(s, 0.7); this.fxAdd.emit(p[0], p[1], p[2], -fx * 10 + (Math.random() - 0.5) * 2, Math.random(), -fz * 10 + (Math.random() - 0.5) * 2, r.flameCol ? [r.flameCol[0], r.flameCol[1] * (0.7 + Math.random() * 0.4), r.flameCol[2], 1] : [1, 0.5 + Math.random() * 0.4, 0.15, 1], 0.75, 0.16, -1.5); } }
     if (Math.abs(r.lat) > this.track.half + 1.4 && sp > 8 && Math.random() < 0.5) { const p = back((Math.random() - 0.5) * 1.6, 0.2); const gc = hexc(this.track.theme.ground2); this.fxN.emit(p[0], p[1], p[2], (Math.random() - 0.5) * 3, 2 + Math.random() * 2, (Math.random() - 0.5) * 3, [gc[0], gc[1], gc[2], 0.7], 0.9, 0.6, 1, 6); }
     // cosmetic trail
     const k = (CAT[r.cos.trail] || CAT.t_none).kind; if (k === 'none' || sp < 6) return;

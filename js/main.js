@@ -412,11 +412,38 @@ const App = window.App = {
     if (this.tab === 'play' && !this.race) this.renderPlay();
     if (this.tab === 'leaderboard') this.renderLeaderboard();
   },
+  // ---------------- stats ----------------
+  statBars(st, cmp) {
+    return `<div class="stats">${STAT_NAMES.map((n, i) => { const v = st[i], w = clamp((v - 0.85) / 0.3, 0.03, 1) * 100; const c = cmp ? cmp[i] : v; const dlt = Math.round(v * 100) - Math.round(c * 100);
+      const cw = clamp((c - 0.85) / 0.3, 0.03, 1) * 100;
+      return `<div class="srow"><span>${n}</span><div class="sbar">${cmp ? `<i class="old" style="width:${cw}%"></i>` : ''}<i style="width:${w}%"></i></div><b>${Math.round(v * 100)}${cmp && dlt ? `<em class="${dlt > 0 ? 'up' : 'dn'}">${dlt > 0 ? '+' : ''}${dlt}</em>` : ''}</b></div>`; }).join('')}</div>`;
+  },
+  modsText(it) {
+    if (!it.stats) return '';
+    const parts = it.stats.map((v, i) => { const p = Math.round((v - 1) * 100); return p ? `${p > 0 ? '+' : '−'}${Math.abs(p)}% ${STAT_NAMES[i]}` : ''; }).filter(Boolean);
+    if (it.offroad) parts.push('Off-road ready');
+    return parts.length ? parts.join(' · ') : 'Balanced — no stat changes';
+  },
+  engineIcon(it) {
+    const col = '#' + (it.flame || 0xffa020).toString(16).padStart(6, '0');
+    return mkCanvas(220, 220, (c) => {
+      c.translate(110, 118); c.lineJoin = 'round';
+      const g = c.createLinearGradient(0, -60, 0, 60); g.addColorStop(0, '#d7dde4'); g.addColorStop(1, '#6b7480');
+      c.fillStyle = g; c.strokeStyle = '#1a1033'; c.lineWidth = 6;
+      c.beginPath(); c.roundRect(-62, -40, 124, 82, 12); c.fill(); c.stroke();
+      c.fillStyle = '#3a414d'; for (let i = 0; i < 4; i++) { c.beginPath(); c.roundRect(-52 + i * 28, -64, 20, 28, 5); c.fill(); c.stroke(); }
+      c.fillStyle = col; c.beginPath(); c.roundRect(-40, -18, 80, 34, 8); c.fill(); c.stroke();
+      c.fillStyle = '#9aa3ad'; c.beginPath(); c.roundRect(62, -10, 26, 18, 4); c.fill(); c.stroke();
+      const fl = c.createRadialGradient(100, 0, 2, 100, 0, 30); fl.addColorStop(0, '#fff'); fl.addColorStop(0.35, col); fl.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = fl; c.beginPath(); c.arc(100, 0, 30, 0, 7); c.fill();
+      c.font = '900 22px Rubik, Arial'; c.fillStyle = '#1a1033'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(it.kind === 'hamster' ? '🐹' : it.kind === 'electric' ? '⚡' : it.kind === 'fusion' ? '☀' : it.kind === 'nitro' ? 'N₂O' : it.kind === 'v12' ? 'V12' : it.kind === 'turbo' ? 'T4' : it.kind === 'torque' ? 'TQ' : 'V2', 0, 0);
+    }).toDataURL();
+  },
   // ---------------- thumbnails ----------------
   thumbQ: [], thumbs: {},
   thumb(id, el) {
     if (this.thumbs[id]) { el.style.backgroundImage = `url(${this.thumbs[id]})`; return; }
     const it = CAT[id];
+    if (it.slot === 'engine') { this.thumbs[id] = this.engineIcon(it); el.style.backgroundImage = `url(${this.thumbs[id]})`; return; }
     if (!this.TR || it.slot === 'horn') { el.textContent = it.slot === 'horn' ? '📯' : '🏎'; return; }
     this.thumbQ.push({ id, el });
   },
@@ -436,7 +463,7 @@ const App = window.App = {
     const scene = { meshes: v.meshes, particles: [], fog: { color: [0, 0, 0], near: 100, far: 200 }, light: { dir: [0.45, 0.8, 0.4].map(x => x / 1.0), sky: [0.7, 0.72, 0.85], ground: [0.35, 0.3, 0.45], sun: [0.65, 0.6, 0.55] }, sky: [0, 0, 0, 0] };
     let cam = { x: 3.8, y: 2.6, z: 4.6, tx: 0, ty: 0.75, tz: 0, fov: 0.8, near: 0.1, far: 50 };
     if (it.slot === 'driver') cam = { x: 1.1, y: 1.85, z: 1.9, tx: 0, ty: 1.45, tz: -0.2, fov: 0.75, near: 0.1, far: 50 };
-    if (it.slot === 'wheels') { const wp = v.k.wheelPos[1] || [0.85, 0.38, 0.9]; cam = { x: wp[0] + 2.2, y: 1.0, z: wp[2] + 1.0, tx: wp[0], ty: wp[1], tz: wp[2], fov: 0.7, near: 0.1, far: 50 }; }
+    if (it.slot === 'wheels') { const wp = v.k.wheelPos[1] || [0.85, 0.38, 0.9]; cam = { x: wp[0] + 2.6, y: 1.5, z: wp[2] + 1.9, tx: wp[0] - 0.2, ty: wp[1] + 0.05, tz: wp[2] - 0.3, fov: 0.8, near: 0.1, far: 50 }; }
     if (it.slot === 'trail') {
       const ps = new Particles(300, it.kind !== 'smoke' && it.kind !== 'bubbles'); const k = it.kind;
       for (let i = 0; i < 70; i++) { const d = 1.4 + i * 0.07; const x = -Math.sin(2.35) * d + (Math.random() - 0.5) * 0.6, z = -Math.cos(2.35) * d + (Math.random() - 0.5) * 0.6; const y = 0.4 + Math.random() * 0.6 + (k === 'smoke' || k === 'bubbles' ? i * 0.01 : 0);
@@ -471,7 +498,9 @@ const App = window.App = {
     const it = CAT[p.equip[this.slot]];
     const hdr = document.createElement('div'); hdr.style.margin = '0 0 12px';
     hdr.innerHTML = `<div class="disp" style="font-size:26px"></div><div class="muted"></div>`;
-    hdr.firstChild.textContent = it.name; hdr.lastChild.textContent = it.stats ? `Speed ${Math.round(it.stats[0] * 100)} · Accel ${Math.round(it.stats[1] * 100)} · Handling ${Math.round(it.stats[2] * 100)}` : RARITY[it.rarity].name + ' ' + SLOTS.find(s => s.id === it.slot).name;
+    hdr.firstChild.textContent = it.name; hdr.lastChild.textContent = it.stats ? this.modsText(it) + (it.desc ? ' — ' + it.desc : '') : (it.desc || RARITY[it.rarity].name + ' ' + SLOTS.find(s => s.id === it.slot).name);
+    const tot = document.createElement('div'); tot.innerHTML = `<div class="muted" style="margin:10px 0 4px;font-weight:900;font-size:12px;letter-spacing:.5px">YOUR LOADOUT (KART × WHEELS × ENGINE)</div>${this.statBars(kartStats(p.equip).s)}${kartStats(p.equip).offroad ? '<div class="muted" style="margin-top:4px">✔ Off-road ready — loses much less speed on grass</div>' : ''}`;
+    hdr.appendChild(tot);
     body.appendChild(hdr); body.appendChild(grid);
     if (locked) { const m = document.createElement('p'); m.className = 'muted'; m.style.marginTop = '14px'; m.textContent = `${locked} more ${SLOTS.find(s => s.id === this.slot).name.toLowerCase()} item${locked > 1 ? 's' : ''} to unlock in the Item Shop and Turbo Pass.`; body.appendChild(m); }
   },
@@ -480,7 +509,7 @@ const App = window.App = {
     const r = rng(hashStr('shop-' + todayKey()));
     const pool = CATALOG.filter(i => !i.def && !i.pass).map(i => ({ i, k: r() })).sort((a, b) => a.k - b.k).map(o => o.i);
     const feat = pool.filter(i => i.rarity === 'legendary' || i.rarity === 'epic').slice(0, 2);
-    const daily = pool.filter(i => !feat.includes(i)).slice(0, 6);
+    const daily = pool.filter(i => !feat.includes(i)).slice(0, 8);
     return { feat, daily };
   },
   renderShop() {
@@ -492,7 +521,7 @@ const App = window.App = {
     const it = CAT[id], rr = RARITY[it.rarity], price = rr.price, owned = Account.owns(id), can = Account.profile.coins >= price;
     const b = this.modal(`<div class="row" style="gap:16px;align-items:stretch;flex-wrap:wrap"><div id="bTh" style="width:200px;height:200px;border-radius:14px;background:${rr.bg};background-size:contain;background-repeat:no-repeat;background-position:center;display:grid;place-items:center;font-size:70px;flex:none"></div>
       <div style="flex:1;min-width:180px"><div class="muted" style="color:${rr.color};font-weight:900">${rr.name.toUpperCase()} ${SLOTS.find(s => s.id === it.slot).name.toUpperCase()}</div><h3 id="bName"></h3>
-      ${it.stats ? `<p class="muted">Speed ${Math.round(it.stats[0] * 100)} · Accel ${Math.round(it.stats[1] * 100)} · Handling ${Math.round(it.stats[2] * 100)}</p>` : ''}
+      ${it.desc ? `<p class="muted" style="margin-bottom:6px">${esc(it.desc)}</p>` : ''}${it.stats ? `<p style="font-weight:900;font-size:13px;margin-bottom:6px">${esc(this.modsText(it))}</p>${this.statBars(kartStats(Object.assign({}, Account.profile.equip, { [it.slot]: id })).s, kartStats(Account.profile.equip).s)}<div class="muted" style="font-size:11px;margin-top:2px">Your loadout with this equipped (grey = now)</div>` : ''}
       <div class="row" style="margin:14px 0"><span class="coin"></span><b style="font-size:24px">${price.toLocaleString()}</b></div>
       ${owned ? '<div class="btn g" style="display:inline-block">Owned</div>' : `<button class="btn y" id="bBuy" ${can ? '' : 'disabled'}>${can ? 'Purchase' : 'Not enough coins'}</button>`}
       ${!owned && !can ? `<p class="muted" style="margin-top:8px">You need ${(price - Account.profile.coins).toLocaleString()} more. Win races and finish challenges to earn coins.</p>` : ''}

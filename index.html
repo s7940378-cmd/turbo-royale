@@ -196,6 +196,13 @@ kbd{background:rgba(255,255,255,.15);border-radius:5px;padding:1px 6px;font-weig
 .kb:hover{border-color:rgba(255,255,255,.5)}
 .kb.wait{border-color:var(--yellow);color:var(--yellow);animation:blink .8s infinite}
 @keyframes blink{50%{opacity:.5}}
+  .stats{display:flex;flex-direction:column;gap:5px;max-width:360px}
+.srow{display:grid;grid-template-columns:92px 1fr 54px;align-items:center;gap:8px;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.3px}
+.sbar{position:relative;height:9px;border-radius:999px;background:rgba(0,0,0,.4);overflow:hidden}
+.sbar i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:linear-gradient(90deg,#ffe14a,#ff9f2e)}
+.sbar i.old{background:rgba(255,255,255,.35)}
+.srow b{text-align:right;font-size:13px}
+.srow em{font-style:normal;font-size:11px;margin-left:3px}.srow em.up{color:#5fe06f}.srow em.dn{color:#ff6a6a}
 #flash{position:fixed;inset:0;z-index:7;background:#bfe8ff;opacity:0;pointer-events:none;mix-blend-mode:screen}
 #touch{position:fixed;inset:auto 0 0 0;height:180px;z-index:8;pointer-events:none}
 #touch button{position:absolute;pointer-events:auto;width:84px;height:84px;border-radius:50%;background:rgba(255,255,255,.18);border:3px solid rgba(255,255,255,.35);font-size:30px;font-family:system-ui;touch-action:none}
