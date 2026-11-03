@@ -21,5 +21,5 @@ Free 3D kart racing in the browser — solo vs bots, or with friends in a party.
 
 ## Notes
 - Progress (coins, items, pass) saves in each player's browser. Settings → **Transfer progress** moves it to another device.
-- Multiplayer connects players' browsers directly (WebRTC via the free PeerJS service). Some very strict networks (some schools or workplaces) block this; home Wi-Fi and phone hotspots work.
+- Multiplayer goes through a free public relay server (secure WebSocket), so it works across different networks. If one relay is down it automatically tries a backup.
 - Must be opened from a website (https), not by double-clicking `index.html`.

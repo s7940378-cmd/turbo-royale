@@ -337,7 +337,7 @@ const App = window.App = {
   },
   // ---------------- party ----------------
   checkInvite() {
-    const m = /party=([A-Za-z0-9]{4,6})/.exec(location.hash || ''); if (!m) return;
+    const m = /party=([A-Za-z0-9]{4,6}(?:-\d)?)/.exec(location.hash || ''); if (!m) return;
     if (!this.netOk) { if (this.netOk === false) this.toast('Multiplayer could not load — check your internet connection.'); return; }
     if (!Account.profile.tag) { this._pendingInvite = m[1]; return; }
     try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { location.hash = ''; }
@@ -347,19 +347,20 @@ const App = window.App = {
   sessionPts: 0, sessionWins: 0,
   onNet(ev, d) {
     if (ev === 'lobby' || ev === 'party') { this.renderParty(); if (ev === 'party') { this._lkDeb && clearTimeout(this._lkDeb); this._lkDeb = setTimeout(() => { if (!this.race) { this.lobbyKarts(); this.renderPlay(); } }, 150); } }
+    if (ev === 'status') { if (this._joining) this.renderParty(); }
     if (ev === 'lost') { this.toast('⚠ ' + esc(d)); if (this.race && this.race.net && !this.race.resultsShown) this.race.feed('Disconnected from party'); }
     if (ev === 'race') { this.startRace(d, false); }
   },
   async joinParty(code) {
     if (this._joining) return; this._joining = true; this.renderParty();
     try { const c = await Net.joinParty(code); Sfx.play('got'); this.toast(`Joined party <b>${esc(c)}</b>`); }
-    catch (e) { const m = e && e.message; this.toast(m === 'bad code' ? 'Party codes are 5 letters/numbers.' : m === 'notfound' ? `No party found with code <b>${esc(String(code).toUpperCase())}</b>. Check the code — the leader must have the game open.` : m === 'offline' ? 'Multiplayer could not load — check your internet connection.' : 'Could not join that party. Try again in a moment.', 6000); }
+    catch (e) { const m = e && e.message; this.toast(m === 'bad code' ? 'Party codes are 5 letters/numbers.' : m === 'notfound' ? `No party found with code <b>${esc(String(code).toUpperCase())}</b>. Check the code — the leader must have the game open on the Play screen.` : m === 'full' ? 'That party is full (8 racers max).' : m === 'noserver' ? 'Could not reach the party server. Your network may be blocking it — try another Wi-Fi or a phone hotspot.' : 'Could not join that party. Try again in a moment.', 6000); }
     this._joining = false; this.renderParty(); this.renderPlay();
   },
   async createParty() {
     if (this._joining) return; this._joining = true; this.renderParty();
     try { await Net.createParty(); Sfx.play('got'); this.toast('Party created! Send your friends the <b>invite link</b> or the code.'); }
-    catch (e) { this.toast(e && e.message === 'offline' ? 'Multiplayer could not load — check your internet connection.' : 'Could not reach the party server. Check your connection and try again.', 6000); }
+    catch (e) { this.toast('Could not reach the party server. Your network may be blocking it — try another Wi-Fi or a phone hotspot.', 7000); }
     this._joining = false; this.renderParty(); this.renderPlay();
   },
   renderParty() {
@@ -370,7 +371,7 @@ const App = window.App = {
       el.innerHTML = meRow + `<p class="muted" style="margin-top:8px">${this.netOk === undefined ? 'Connecting to multiplayer…' : 'Multiplayer could not load. Check your internet connection and reload. Solo races with bots still work.'}</p>`;
       return;
     }
-    if (this._joining) { el.innerHTML = meRow + '<div class="row" style="gap:10px;margin-top:10px"><div class="spinner" style="width:22px;height:22px;border-width:3px"></div><b>Connecting…</b></div>'; return; }
+    if (this._joining) { el.innerHTML = meRow + '<div class="row" style="gap:10px;margin-top:10px"><div class="spinner" style="width:22px;height:22px;border-width:3px;flex:none"></div><b>' + esc(Net.status || 'Connecting…') + '</b></div>'; return; }
     if (!Net.party) {
       el.innerHTML = meRow + `<button class="btn y" style="width:100%;margin:6px 0 10px" id="mkParty">Create party</button>
         <div class="row"><input class="inp" id="codeIn" placeholder="CODE" maxlength="6"><button class="btn b" id="joinBtn">Join</button></div>
