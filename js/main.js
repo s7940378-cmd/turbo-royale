@@ -215,7 +215,7 @@ const App = window.App = {
     this.modal(`<h3>Redeem code</h3><div class="row"><input class="inp" id="rcIn" maxlength="24" placeholder="ENTER CODE"><button class="btn y" id="rcOk">Redeem</button></div>
       <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn" id="rcBack">Back</button></div>`);
     const inp = $('rcIn'); setTimeout(() => inp.focus(), 50);
-    const CODES = { 889511634: { coins: 5000 } }; // stored as hashes
+    const CODES = { 889511634: { coins: 5000 }, 1016588056: { coins: 10000 } }; // stored as hashes
     const go = () => {
       const code = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); if (!code) return;
       const h = hashStr('code:' + code), r = CODES[h], p = Account.profile; p.redeemed = p.redeemed || [];
