@@ -141,12 +141,14 @@ const ITEMS = {
   oil: { name: 'Oil Slick', icon: '🛢' },
   shield: { name: 'Shield', icon: '🛡' },
   surge: { name: 'Storm Surge', icon: '⚡' },
+  torpedo: { name: 'Torpedo', icon: '🌠' },
 };
-function rollItem(rand, posFrac) { // posFrac 0 = leader, 1 = last
+function rollItem(rand, posFrac, lastThree) { // posFrac 0 = leader, 1 = last; lastThree adds a Torpedo chance
   const w = posFrac < 0.15 ? { oil: 40, shield: 30, rocket: 15, nitro: 15 }
     : posFrac < 0.5 ? { oil: 20, rocket: 35, nitro: 30, shield: 15 }
       : posFrac < 0.8 ? { rocket: 35, nitro: 30, nitro3: 20, shield: 10, oil: 5 }
         : { nitro3: 35, rocket: 30, surge: 15, nitro: 20 };
+  if (lastThree) w.torpedo = posFrac >= 0.99 ? 22 : 14;
   let tot = 0; for (const k in w) tot += w[k];
   let r = rand() * tot; for (const k in w) { r -= w[k]; if (r <= 0) return k; }
   return 'nitro';

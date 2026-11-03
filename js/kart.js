@@ -123,6 +123,14 @@ const KartFactory = (() => {
     for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; g.box(0.05 + Math.abs(Math.cos(a)) * 0.4, 0.05 + Math.abs(Math.sin(a)) * 0.4, 0.3, hexc(0xffd23a), 0, 0, -0.5); }
     g.cyl(0.12, 0.1, 8, hexc(0xffa020, 1), 'z', 0, 0, -0.62);
     props.rocket = R.upload(g);
+    g = new Geo(); // Torpedo: big silver-and-red projectile the kart turns into (+z = front)
+    g.cyl(0.95, 2.6, 14, hexc(0xc9d2dc, 0.12), 'z', 0, 1.0, -0.2);
+    g.push(M4.trs(0, 1.0, 1.1, 0, Math.PI / 2, 0)); g.cone(0.95, 1.3, 14, hexc(0xe8333a, 0.1)); g.pop();
+    g.cyl(0.97, 0.35, 14, hexc(0xe8333a, 0.1), 'z', 0, 1.0, 0.6); g.cyl(0.97, 0.25, 14, hexc(0x2a2f3a), 'z', 0, 1.0, -1.3);
+    for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + Math.PI / 4; g.push(M4.trs(Math.cos(a) * 1.0, 1.0 + Math.sin(a) * 1.0, -1.25, 0, 0, a)); g.wedge(0.12, 0.7, 1.0, hexc(0xffd23a, 0.15), 0, -0.35, 0, 0.15); g.pop(); }
+    g.box(1.3, 0.22, 0.05, hexc(0x2bf0ff, 0.9), 0, 1.25, 1.05); // glowing visor stripe
+    g.cyl(0.6, 0.2, 12, hexc(0xffa020, 1), 'z', 0, 1.0, -1.55);
+    props.torpedo = R.upload(g);
     g = new Geo(); // oil slick: flat blob
     for (let i = 0; i < 12; i++) { const a0 = i / 12 * Math.PI * 2, a1 = (i + 1) / 12 * Math.PI * 2; const r0 = 2 + Math.sin(i * 2.3) * 0.4, r1 = 2 + Math.sin((i + 1) * 2.3) * 0.4; g.tri([0, 0, 0], [Math.cos(a1) * r1, 0, Math.sin(a1) * r1], [Math.cos(a0) * r0, 0, Math.sin(a0) * r0], hexc(0x141018, 0.1)); }
     g.box(0.6, 0.02, 0.3, hexc(0x6a5cff, 0.6), 0.5, 0.02, 0.3); g.box(0.3, 0.02, 0.5, hexc(0x2bf0ff, 0.6), -0.4, 0.02, -0.5);
@@ -151,7 +159,8 @@ class KartView {
     this.wheels = k.wheelPos.map(() => this.R.mesh(k.wheel));
     this.shadow = this.R.mesh(props.blob, { alpha: 0.35, tint: [0, 0, 0] });
     this.shieldM = this.R.mesh(props.shield, { alpha: 0.28, visible: false, twoSided: true, blend: 'add' });
-    this.meshes = [this.shadow, this.bodyM, ...this.wheels, this.shieldM];
+    this.torpM = this.R.mesh(props.torpedo, { visible: false });
+    this.meshes = [this.shadow, this.bodyM, ...this.wheels, this.shieldM, this.torpM];
     this.spin = 0;
   }
   update(x, y, z, yaw, pitch, roll, steer, speed, dt, opts) {
@@ -162,7 +171,7 @@ class KartView {
     this.spin += speed * dt / this.k.wr;
     const tmp = new Float32Array(16);
     this.k.wheelPos.forEach((wp, i) => {
-      const st = i < 2 ? steer * 0.45 : 0;
+      const st = i < 2 ? -steer * 0.5 : 0; // steering right lowers yaw, so wheels turn by -steer
       M4.trs(wp[0], wp[1], wp[2], st, this.spin, 0, 1, tmp);
       M4.mul(this.bodyM.m, tmp, this.wheels[i].m);
     });
@@ -170,7 +179,8 @@ class KartView {
     this.shieldM.visible = !!opts.shield;
     if (opts.shield) M4.trs(x, y + 0.9, z, performance.now() / 400, 0, 0, 1, this.shieldM.m);
     const a = opts.alpha === undefined ? 1 : opts.alpha;
-    for (const m of [this.bodyM, ...this.wheels]) { m.alpha = a; m.visible = a > 0.01; m.emis = opts.flash ? 0.6 : 0; }
+    for (const m of [this.bodyM, ...this.wheels]) { m.alpha = a; m.visible = a > 0.01 && !opts.torp; m.emis = opts.flash ? 0.6 : 0; }
+    this.torpM.visible = !!opts.torp && a > 0.01; if (opts.torp) M4.trs(x, y + 0.2 + Math.sin(performance.now() / 90) * 0.08, z, yaw, pitch, performance.now() / 160, 1, this.torpM.m);
     this.shadow.visible = a > 0.01;
   }
 }

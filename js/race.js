@@ -171,8 +171,20 @@ class Race {
     if (r.padCd > 0) r.padCd -= dt;
     r.hop = Math.max(0, r.hop - dt * 2.5);
     if (!racing) { f *= 1 - 3 * dt; lat *= 1 - 5 * dt; }
+    else if (r.torp > 0) {
+      // Torpedo: auto-pilot down the middle of the track at huge speed
+      r.torp -= dt; r.spin = 0; r.drift = false; r.charge = 0; r.spinAng = 0;
+      const ti = t.wrap(r.idx + 16); r.torpLane = lerp(r.torpLane || 0, 0, 1 - Math.exp(-0.8 * dt)); const pt = t.point(ti, r.torpLane);
+      r.yaw += angDiff(r.yaw, Math.atan2(pt[0] - r.x, pt[2] - r.z)) * (1 - Math.exp(-7 * dt));
+      f = lerp(f, 72, 1 - Math.exp(-2.5 * dt)); lat *= 1 - 8 * dt; r.steer = 0;
+      if (r.torp <= 0) { r.torp = 0; r.boost = Math.max(r.boost, 0.7); this._burst(r.x, r.y + 1, r.z, 24, [1, 0.8, 0.3]); if (r.local) Sfx.play('pop'); }
+    }
     else if (r.spin > 0) {
-      r.spin -= dt; f *= 1 - 2.2 * dt; lat *= 1 - 4 * dt; r.yaw += 11 * dt; r.drift = false; r.charge = 0;
+      // the kart body spins as an animation, while its real heading is steered back to face down the track
+      r.spin -= dt; f *= 1 - 2.2 * dt; lat *= 1 - 4 * dt; r.drift = false; r.charge = 0;
+      const th = t.heading(r.idx); r.yaw += angDiff(r.yaw, th) * (1 - Math.exp(-5 * dt));
+      const dur = r.spinDur || 1; r.spinAng = (1 - Math.max(0, r.spin) / dur) * Math.PI * 2 * (r.spinTurns || 1);
+      if (r.spin <= 0) { r.spin = 0; r.spinAng = 0; r.yaw = th + angDiff(th, r.yaw) * 0.3; }
     } else {
       if (r.boost > 0) { r.boost -= dt; const bm = maxF * 1.42; f = Math.min(f + 70 * dt, bm); }
       else if (c.gas > 0) { if (f < maxF) f += acc * c.gas * dt * (1 - 0.65 * f / maxF); else f -= (f - maxF) * 1.8 * dt; }
@@ -258,7 +270,7 @@ class Race {
     r.idx = this.track.nearest(r.x, r.z, r.idx, 20); r.lat = this.track.lateral(r.idx, r.x, r.z);
     r.y = lerp(r.y, this.track.heightAt(r.idx, r.x, r.z), 0.5);
     r.pitch = lerp(r.pitch, -Math.atan(this.track.ty[r.idx] * Math.cos(r.yaw - this.track.heading(r.idx))), 0.2);
-    r.drift = !!n.dr; r.driftDir = n.dd || 0; r.spin = n.sp ? 0.1 : 0; r.shield = n.sh ? 1 : 0; r.boost = n.b ? 0.1 : 0; r.charge = n.ch || 0;
+    r.drift = !!n.dr; r.driftDir = n.dd || 0; r.spin = n.sp ? 0.1 : 0; r.torp = n.tp ? 0.1 : 0; if (n.sp) { r.spinAng = (r.spinAng || 0) + dt * 10; } else if (r.spinAng) { r.spinAng = 0; } r.shield = n.sh ? 1 : 0; r.boost = n.b ? 0.1 : 0; r.charge = n.ch || 0;
     r.lap = n.lap; r.prog = n.prog; r.steer = n.st || 0;
     if (n.fin && !r.finished) { r.finished = true; r.ftime = n.fin; }
   }
@@ -266,10 +278,16 @@ class Race {
     const rs = this.racers;
     for (let a = 0; a < rs.length; a++) for (let b = a + 1; b < rs.length; b++) {
       const A = rs[a], B = rs[b]; if (A.elim || B.elim) continue;
-      const dx = B.x - A.x, dz = B.z - A.z, d = Math.hypot(dx, dz); if (d > 2.3 || d < 0.001) continue;
-      const nx = dx / d, nz = dz / d, push = (2.3 - d);
+      const dx = B.x - A.x, dz = B.z - A.z, d = Math.hypot(dx, dz); const rad = (A.torp > 0 || B.torp > 0) ? 3.3 : 2.3; if (d > rad || d < 0.001) continue;
+      const nx = dx / d, nz = dz / d, push = (rad - d);
       const simA = A.local || (A.bot && this.host), simB = B.local || (B.bot && this.host);
-      const wa = simA ? (simB ? 0.5 : 1) : 0, wb = simB ? (simA ? 0.5 : 1) : 0;
+      let wa = simA ? (simB ? 0.5 : 1) : 0, wb = simB ? (simA ? 0.5 : 1) : 0;
+      const tA = A.torp > 0, tB = B.torp > 0;
+      if (tA !== tB) {
+        const victim = tA ? B : A, simV = tA ? simB : simA;
+        if (tA) { wa = 0; wb = simB ? 1 : 0; } else { wb = 0; wa = simA ? 1 : 0; }
+        if (simV && !(victim.spin > 0)) { if (this.hit(victim, 'torp', (tA ? A : B).id)) { victim.vx += (tA ? nx : -nx) * 14; victim.vz += (tA ? nz : -nz) * 14; } this._burst(victim.x, victim.y + 1, victim.z, 16, [1, 0.7, 0.2]); if (this._near(victim)) Sfx.play('boom'); }
+      }
       A.x -= nx * push * wa; A.z -= nz * push * wa; B.x += nx * push * wb; B.z += nz * push * wb;
       const rv = (B.vx - A.vx) * nx + (B.vz - A.vz) * nz;
       if (rv < 0) { const j = -rv * 0.7; if (simA) { A.vx -= nx * j * wa * 2 * 0.5; A.vz -= nz * j * wa; } if (simB) { B.vx += nx * j * wb; B.vz += nz * j * wb; } if ((A.local || B.local) && j > 4) Sfx.play('bump'); }
@@ -338,7 +356,7 @@ class Race {
       if (Math.abs(al) < 3.2 && Math.abs(lt - p.lat) < 2.4) { r.boost = Math.max(r.boost, 1.0); r.padCd = 1; if (r.local) { Sfx.play('boost'); this.stats.pad++; } }
     }
     for (const s of this.slicks) {
-      if (s.dead || (s.owner === r.id && s.age < 0.6)) continue;
+      if (s.dead || r.torp > 0 || (s.owner === r.id && s.age < 0.6)) continue;
       if (Math.hypot(s.x - r.x, s.z - r.z) < 2.3) { s.dead = true; this.hit(r, 'oil', s.owner); this.sendFx({ t: 'x', sid: s.id }); }
     }
     if (r.shield > 0) r.shield -= dt;
@@ -348,7 +366,7 @@ class Race {
   _roll(r) {
     const n = this.racers.filter(o => !o.elim).length;
     const posFrac = n > 1 ? (r.place - 1) / (n - 1) : 0;
-    const it = rollItem(this.rand, posFrac);
+    const it = rollItem(this.rand, posFrac, n >= 4 && r.place > n - 3);
     if (r.local) {
       r.rolling = 1.3; r.item = null; r._rollTo = it;
       const box = this.h.item.parentElement; box.classList.add('rolling'); const icons = Object.values(ITEMS).map(i => i.icon); let k = 0;
@@ -360,7 +378,8 @@ class Race {
     if (!r.item || r.rolling > 0 || r.spin > 0) return;
     const it = r.item;
     if (r.local) this.stats.itemuse++;
-    if (it === 'nitro' || it === 'nitro3') { r.boost = Math.max(r.boost, 1.3); if (r.local) Sfx.play('boost'); }
+    if (it === 'torpedo') { r.torp = 6.5; r.torpLane = r.lat; r.spin = 0; r.boost = 0; if (r.local || this._near(r)) { Sfx.play('boost'); Sfx.play('rocket'); } if (r.local) this.msg('', 'TORPEDO!', 1.2); }
+    else if (it === 'nitro' || it === 'nitro3') { r.boost = Math.max(r.boost, 1.3); if (r.local) Sfx.play('boost'); }
     else if (it === 'shield') { r.shield = 8; if (r.local) Sfx.play('shield'); }
     else if (it === 'rocket') {
       const ahead = this.racers.filter(o => !o.elim && !o.finished && o.prog > r.prog).sort((a, b) => a.prog - b.prog)[0];
@@ -404,13 +423,15 @@ class Race {
     this.fxSeen.add(fx.id); Sfx.play('surge'); this.flash = 0.6;
     for (const r of this.racers) {
       if (r.id === fx.owner || r.elim || r.finished || r.prog <= fx.prog) continue;
-      if (r.local || (r.bot && this.host)) { if (r.shield > 0) { r.shield = 0; Sfx.play('pop'); } else { r.spin = 0.7; r.slow = 2.2; r.boost = 0; } }
+      if (r.local || (r.bot && this.host)) { if (r.shield > 0) { r.shield = 0; Sfx.play('pop'); } else if (!(r.torp > 0)) { this.spinOut(r, 0.7, 1); r.slow = 2.2; r.boost = 0; } }
       this._burst(r.x, r.y + 2, r.z, 12, [0.6, 0.8, 1]);
     }
   }
+  spinOut(r, dur, turns) { r.spin = dur; r.spinDur = dur; r.spinTurns = turns || 1; r.spinAng = 0; }
   hit(r, kind, by) {
+    if (r.torp > 0) return false;
     if (r.shield > 0) { r.shield = 0; if (r.local || this._near(r)) Sfx.play('pop'); this._burst(r.x, r.y + 1, r.z, 14, [0.4, 0.9, 1]); return false; }
-    r.spin = kind === 'rocket' ? 1.25 : 0.95; r.boost = 0; r.drift = false; r.charge = 0;
+    this.spinOut(r, kind === 'rocket' ? 1.25 : 0.95, kind === 'rocket' ? 2 : 1); r.boost = 0; r.drift = false; r.charge = 0;
     if (kind === 'rocket') { r.vx *= 0.3; r.vz *= 0.3; }
     if (r.local) { Sfx.play('hit'); this.shake = 0.5; }
     if (by && by !== r.id) { if (this.me && by === this.me.id && kind === 'rocket') this.stats.rockethit++; else this.sendFx({ t: 'h', id: 'h' + Math.random(), by, k: kind[0] }); }
@@ -528,6 +549,7 @@ class Race {
       for (const s of [-0.85, 0.85]) { const p = back(s, 0.15); this.fxAdd.emit(p[0], p[1], p[2], -fx * 4 + (Math.random() - 0.5) * 6, Math.random() * 4, -fz * 4 + (Math.random() - 0.5) * 6, col, r.charge >= 0.7 ? 0.7 : 0.35, 0.25, 0, 12); }
       if (Math.random() < 0.3) { const p = back(r.driftDir * 0.85, 0.1); this.fxN.emit(p[0], p[1], p[2], 0, 1, 0, [0.8, 0.8, 0.8, 0.35], 1.2, 0.8, 2); }
     }
+    if (r.torp > 0) { for (let q = 0; q < 3; q++) { const p = back((Math.random() - 0.5) * 0.8, 1.0); this.fxAdd.emit(p[0] - fx * 1.6, p[1], p[2] - fz * 1.6, -fx * 14 + (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 2, -fz * 14 + (Math.random() - 0.5) * 3, [1, 0.45 + Math.random() * 0.4, 0.1, 1], 1.4, 0.22, -2); } this.fxN.emit(r.x - fx * 4, r.y + 1, r.z - fz * 4, 0, 1.5, 0, [0.75, 0.75, 0.8, 0.45], 1.6, 1.0, 3); }
     if (r.boost > 0) { for (const s of [-0.3, 0.3]) { const p = back(s, 0.7); this.fxAdd.emit(p[0], p[1], p[2], -fx * 10 + (Math.random() - 0.5) * 2, Math.random(), -fz * 10 + (Math.random() - 0.5) * 2, [1, 0.5 + Math.random() * 0.4, 0.15, 1], 0.75, 0.16, -1.5); } }
     if (Math.abs(r.lat) > this.track.half + 1.4 && sp > 8 && Math.random() < 0.5) { const p = back((Math.random() - 0.5) * 1.6, 0.2); const gc = hexc(this.track.theme.ground2); this.fxN.emit(p[0], p[1], p[2], (Math.random() - 0.5) * 3, 2 + Math.random() * 2, (Math.random() - 0.5) * 3, [gc[0], gc[1], gc[2], 0.7], 0.9, 0.6, 1, 6); }
     // cosmetic trail
@@ -545,10 +567,10 @@ class Race {
     this.fxAdd.update(dt); this.fxN.update(dt);
     for (const r of this.racers) {
       const a = r.elim ? 0 : 1;
-      r.visYaw = r.yaw + (r.drift ? r.driftDir * -(0.3 + 0.1 * (r.driftK || 0)) : 0);
+      r.visYaw = r.yaw + (r.drift ? r.driftDir * -(0.3 + 0.1 * (r.driftK || 0)) : 0) + (r.spin > 0 ? (r.spinAng || 0) : 0);
       const vy = r.visYaw;
       const flash = r.spin > 0 && Math.floor(this.t * 12) % 2 === 0;
-      r.view.update(r.x, r.y, r.z, vy, r.pitch, r.roll, r.steer, r.f, dt, { hop: r.hop * 0.6, shield: r.shield > 0, alpha: a, flash });
+      r.view.update(r.x, r.y, r.z, vy, r.pitch, r.roll, r.steer, r.f, dt, { hop: r.hop * 0.6, shield: r.shield > 0, alpha: a, flash, torp: r.torp > 0 });
       if (r.remote || r.bot) this._trailsRemoteOnly(r, dt);
     }
   }
