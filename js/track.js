@@ -38,6 +38,10 @@ class Track {
     this.def = def; this.theme = THEMES[def.theme]; this.w = def.width; this.half = def.width / 2;
     this.wallD = this.half + 7;
     this._spline();
+    const memo = Track._fmemo || (Track._fmemo = {});
+    const key = this.def.id + ':' + this.N;
+    if (memo[key]) Object.assign(this, memo[key]);
+    else { this.genFeatures(); memo[key] = { branches: this.branches, gates: this.gates, ramps: this.ramps, extraPads: this.extraPads, extraBoxes: this.extraBoxes, patrols: this.patrols, barrels: this.barrels }; }
   }
   _spline() {
     const S = this.def.scale || 1;
@@ -115,6 +119,7 @@ class Track {
         const j = (i + 1) % N, o = side * this.wallD;
         const a = [this.px[i] - this.tz[i] * o, this.py[i] - 0.3, this.pz[i] + this.tx[i] * o], b = [this.px[j] - this.tz[j] * o, this.py[j] - 0.3, this.pz[j] + this.tx[j] * o];
         const c = [b[0], b[1] + 1.6, b[2]], d = [a[0], a[1] + 1.6, a[2]];
+        if (this.branches.length && this.inBranchCorridor((a[0] + b[0]) / 2, (a[2] + b[2]) / 2, null, 0.5)) continue;
         const col = wc[Math.floor(i / 3) % 2];
         if (side > 0) wallG.quad(a, b, c, d, col); else wallG.quad(b, a, d, c, col);
       }
@@ -146,8 +151,7 @@ class Track {
     const seed = hashStr(this.def.id);
     for (let zi = 0; zi <= RES; zi++) for (let xi = 0; xi <= RES; xi++) {
       const x = x0 + xi * cw, z = z0 + zi * ch;
-      let bd = 1e18, bi = 0; for (let i = 0; i < N; i += 3) { const d = (this.px[i] - x) ** 2 + (this.pz[i] - z) ** 2; if (d < bd) { bd = d; bi = i; } }
-      const d = Math.sqrt(bd); const base = this.py[bi] - 0.12;
+      const sn = this.surfaceNear(x, z, 3); const d = sn[0]; const base = sn[1] - 0.12;
       const t = clamp((d - this.wallD - 4) / 70, 0, 1); const s = t * t * (3 - 2 * t);
       const n = vnoise(x / 60, z / 60, seed) * 0.65 + vnoise(x / 22, z / 22, seed + 3) * 0.35;
       const hill = (this.def.theme === 'neon' ? 4 : 34) * n * s + s * (this.def.theme === 'neon' ? 0 : 6);
@@ -174,6 +178,7 @@ class Track {
     meshes.push(R.mesh(R.uploadRaw(data)));
     // scenery
     meshes.push(R.mesh(R.upload(this._scenery(quality))));
+    meshes.push(...this.buildFeatures(R, quality));
     // sky dome
     const sky = new Geo(); const top = T.neon ? hexc(0x05020f, 1) : hexc(0x2f7de0, 1); const hor = [...T.fog, 1];
     for (let j = 0; j < 6; j++) for (let i = 0; i < 16; i++) {
@@ -258,6 +263,10 @@ class Track {
       c.lineJoin = 'round'; c.lineCap = 'round';
       c.beginPath(); for (let i = 0; i <= this.N; i += 4) { const p = map(this.px[i % this.N], this.pz[i % this.N]); i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]); } c.closePath();
       c.strokeStyle = 'rgba(0,0,0,.55)'; c.lineWidth = 9; c.stroke(); c.strokeStyle = '#fff'; c.lineWidth = 5; c.stroke();
+      for (const b of this.branches || []) {
+        c.beginPath(); for (let i = 0; i < b.N; i += 3) { const p = map(b.px[i], b.pz[i]); i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]); } const e = map(b.px[b.N - 1], b.pz[b.N - 1]); c.lineTo(e[0], e[1]);
+        c.strokeStyle = 'rgba(0,0,0,.5)'; c.lineWidth = 6; c.setLineDash([]); c.stroke(); c.strokeStyle = b.kind === 'short' ? '#ff7a3a' : '#7fd0ff'; c.lineWidth = 3; c.setLineDash([4, 3]); c.stroke(); c.setLineDash([]);
+      }
       const s = map(this.px[0], this.pz[0]); c.fillStyle = '#ffe14a'; c.fillRect(s[0] - 4, s[1] - 4, 8, 8);
     });
     return { img, map, S };

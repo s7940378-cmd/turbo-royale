@@ -170,13 +170,24 @@ const ITEMS = {
   shield: { name: 'Shield', icon: '🛡' },
   surge: { name: 'Storm Surge', icon: '⚡' },
   torpedo: { name: 'Torpedo', icon: '🌠' },
+  gold: { name: 'Golden Nitro', icon: '🌟' },
+  seeker: { name: 'Crown Seeker', icon: '🎯' },
+  decoy: { name: 'Decoy Box', icon: '📦' },
 };
-function rollItem(rand, posFrac, lastThree) { // posFrac 0 = leader, 1 = last; lastThree adds a Torpedo chance
-  const w = posFrac < 0.15 ? { oil: 40, shield: 30, rocket: 15, nitro: 15 }
-    : posFrac < 0.5 ? { oil: 20, rocket: 35, nitro: 30, shield: 15 }
-      : posFrac < 0.8 ? { rocket: 35, nitro: 30, nitro3: 20, shield: 10, oil: 5 }
-        : { nitro3: 35, rocket: 30, surge: 15, nitro: 20 };
+// Comeback-balanced item odds. posFrac: 0 = leader … 1 = last. gap: laps behind the leader.
+// Leaders get defensive / neutral items; trailing racers get speed and gap-closers.
+function rollItem(rand, posFrac, lastThree, gap, seekerOK) {
+  gap = gap || 0;
+  let w;
+  if (posFrac <= 0.001) w = { oil: 28, decoy: 24, shield: 26, nitro: 22 };
+  else if (posFrac < 0.35) w = { oil: 18, decoy: 14, rocket: 30, nitro: 26, shield: 12 };
+  else if (posFrac < 0.7) w = { rocket: 30, nitro: 24, nitro3: 18, shield: 8, oil: 8, gold: 6, seeker: 6 };
+  else w = { nitro3: 24, gold: 18, rocket: 20, surge: 10, seeker: 12, nitro: 10 };
   if (lastThree) w.torpedo = posFrac >= 0.99 ? 22 : 14;
+  // the further behind, the stronger the catch-up items
+  const boost = gap > 0.25 ? 2 : gap > 0.12 ? 1.5 : gap < 0.03 ? 0.5 : 1;
+  for (const k of ['gold', 'torpedo', 'nitro3', 'seeker', 'surge']) if (w[k]) w[k] *= boost;
+  if (!seekerOK || gap < 0.05) delete w.seeker;
   let tot = 0; for (const k in w) tot += w[k];
   let r = rand() * tot; for (const k in w) { r -= w[k]; if (r <= 0) return k; }
   return 'nitro';

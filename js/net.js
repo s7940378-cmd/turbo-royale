@@ -189,8 +189,8 @@ const Net = {
   sendRace(race) {
     if (!this.party) return;
     const r = race.me; const out = {};
-    if (r) out.k = { x: r2(r.x), z: r2(r.z), vx: r2(r.vx), vz: r2(r.vz), yaw: r2(r.yaw), f: r2(r.f), lap: r.lap, prog: +r.prog.toFixed(4), dr: r.drift ? 1 : 0, dd: r.driftDir, sp: r.spin > 0 ? 1 : 0, sh: r.shield > 0 ? 1 : 0, tp: r.torp > 0 ? 1 : 0, b: r.boost > 0 ? 1 : 0, ch: r2(r.charge), st: r2(r.steer), fin: r.finished ? r2(r.ftime) : 0, el: r.elim ? 1 : 0, rid: race.opts.rid };
-    if (race.host) out.b = race.racers.filter(o => o.bot).map(o => [o.id, r2(o.x), r2(o.z), r2(o.vx), r2(o.vz), r2(o.yaw), r2(o.f), o.lap, +o.prog.toFixed(4), (o.drift ? 1 : 0) | (o.spin > 0 ? 2 : 0) | (o.shield > 0 ? 4 : 0) | (o.boost > 0 ? 8 : 0) | (o.driftDir < 0 ? 16 : 0) | (o.torp > 0 ? 32 : 0), o.finished ? r2(o.ftime) : 0]);
+    if (r) out.k = { x: r2(r.x), z: r2(r.z), vx: r2(r.vx), vz: r2(r.vz), yaw: r2(r.yaw), f: r2(r.f), lap: r.lap, prog: +r.prog.toFixed(4), dr: r.drift ? 1 : 0, dd: r.driftDir, sp: r.spin > 0 ? 1 : 0, sh: r.shield > 0 ? 1 : 0, tp: r.torp > 0 ? 1 : 0, ay: r2(r.visAir || 0), tk: r.trickT > 0 ? 1 : 0, b: r.boost > 0 ? 1 : 0, ch: r2(r.charge), st: r2(r.steer), fin: r.finished ? r2(r.ftime) : 0, el: r.elim ? 1 : 0, rid: race.opts.rid };
+    if (race.host) out.b = race.racers.filter(o => o.bot).map(o => [o.id, r2(o.x), r2(o.z), r2(o.vx), r2(o.vz), r2(o.yaw), r2(o.f), o.lap, +o.prog.toFixed(4), (o.drift ? 1 : 0) | (o.spin > 0 ? 2 : 0) | (o.shield > 0 ? 4 : 0) | (o.boost > 0 ? 8 : 0) | (o.driftDir < 0 ? 16 : 0) | (o.torp > 0 ? 32 : 0), o.finished ? r2(o.ftime) : 0, r2(o.visAir || 0)]);
     out.fx = this.fxOut.slice(-8);
     this.setParty(out);
   },
@@ -205,7 +205,7 @@ const Net = {
       const b = p.presence.b;
       if (!race.host && Array.isArray(b) && p.peer === hostId && b !== this._lastB) {
         this._lastB = b;
-        for (const a of b) { if (!Array.isArray(a)) continue; const bot = race.byId[a[0]]; if (!bot || !bot.bot) continue; bot.net = { x: a[1], z: a[2], vx: a[3], vz: a[4], yaw: a[5], f: a[6], lap: a[7], prog: a[8], dr: a[9] & 1, sp: a[9] & 2, sh: a[9] & 4, b: a[9] & 8, dd: a[9] & 16 ? -1 : 1, tp: a[9] & 32, fin: a[10], at: now }; }
+        for (const a of b) { if (!Array.isArray(a)) continue; const bot = race.byId[a[0]]; if (!bot || !bot.bot) continue; bot.net = { x: a[1], z: a[2], vx: a[3], vz: a[4], yaw: a[5], f: a[6], lap: a[7], prog: a[8], dr: a[9] & 1, sp: a[9] & 2, sh: a[9] & 4, b: a[9] & 8, dd: a[9] & 16 ? -1 : 1, tp: a[9] & 32, ay: a[11] || 0, fin: a[10], at: now }; }
       }
       const fx = p.presence.fx;
       if (Array.isArray(fx)) for (const f of fx) if (f && typeof f.id === 'string') race.onFx(sanitizeFx(f));
@@ -215,7 +215,7 @@ const Net = {
 };
 function sanitizeFx(f) {
   const o = { t: String(f.t || '').slice(0, 2), id: String(f.id).slice(0, 64) };
-  for (const k of ['owner', 'tgt', 'sid', 'by', 'who', 'k']) if (f[k] != null) o[k] = String(f[k]).slice(0, 64);
-  for (const k of ['idx', 'lat', 'x', 'y', 'z', 'prog']) if (typeof f[k] === 'number' && isFinite(f[k])) o[k] = f[k];
+  for (const k of ['owner', 'tgt', 'sid', 'by', 'who', 'k', 'kd']) if (f[k] != null) o[k] = String(f[k]).slice(0, 64);
+  for (const k of ['idx', 'lat', 'x', 'y', 'z', 'prog', 'sk', 'gi', 'bi']) if (typeof f[k] === 'number' && isFinite(f[k])) o[k] = f[k];
   return o;
 }
