@@ -151,7 +151,7 @@ class Track {
     const seed = hashStr(this.def.id);
     for (let zi = 0; zi <= RES; zi++) for (let xi = 0; xi <= RES; xi++) {
       const x = x0 + xi * cw, z = z0 + zi * ch;
-      const sn = this.surfaceNear(x, z, 3); const d = sn[0]; const base = sn[1] - 0.12;
+      const sn = this.terrainBase(x, z); const d = sn[0]; const base = sn[1];
       const t = clamp((d - this.wallD - 4) / 70, 0, 1); const s = t * t * (3 - 2 * t);
       const n = vnoise(x / 60, z / 60, seed) * 0.65 + vnoise(x / 22, z / 22, seed + 3) * 0.35;
       const hill = (this.def.theme === 'neon' ? 4 : 34) * n * s + s * (this.def.theme === 'neon' ? 0 : 6);

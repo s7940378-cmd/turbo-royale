@@ -268,7 +268,7 @@ class Race {
     this._constrain(r);
     if (r.seg && r.seg === pseg) this._gateCheck(r, psi);
     const S2 = r.seg || t, si = r.seg ? r.sIdx : r.idx;
-    let gy = S2.heightAt(si, r.x, r.z);
+    let gy = Math.max(S2.heightAt(si, r.x, r.z), t.groundHeight(r.x, r.z) + 0.03); // never below the ground
     // ramps
     r.rampY = 0;
     for (const rp of this.ramps) {
@@ -283,7 +283,7 @@ class Race {
       if (r.airY <= 0) { r.airY = 0; r.vy = 0; if (r.trick) { r.boost = Math.max(r.boost, 0.85 * st[3]); if (r.local) { Sfx.play('mini', 2); this.msg('', 'TRICK BOOST!', 0.9); } } r.trick = false; this._burst(r.x, r.y, r.z, 8, [0.9, 0.9, 0.9]); }
     }
     if (r.trickT > 0) r.trickT -= dt;
-    r.y = lerp(r.y, gy, 0.5);
+    r.y = gy > r.y ? gy : lerp(r.y, gy, 0.6); // never below the road surface
     r.visAir = Math.max(r.airY || 0, r.rampY || 0);
     const hd = S2.heading(si);
     const slope = S2.ty[si] * Math.cos(r.yaw - hd);
@@ -299,7 +299,7 @@ class Race {
     if (r.seg) {
       const b = r.seg; r.sIdx = b.nearest(r.x, r.z, r.sIdx, 14); const lb = b.lateral(r.sIdx, r.x, r.z);
       const past = (r.sIdx >= b.N - 1 && b.along(b.N - 1, r.x, r.z) > 0) || (r.sIdx <= 0 && b.along(0, r.x, r.z) < 0);
-      if (past || (Math.abs(lb) > b.half + 1.5 && Math.abs(latM) < t.half + 1)) r.seg = null; else r.latB = lb;
+      if (past || (Math.abs(lb) > b.half + 1.5 && Math.abs(latM) < t.half + 1) || (Math.abs(lb) > b.wallD - 0.5 && Math.abs(latM) < t.wallD)) r.seg = null; else r.latB = lb;
     }
     if (!r.seg && t.branches) for (const b of t.branches) {
       if (!b.near(r.mIdx, 8)) continue;
@@ -390,7 +390,7 @@ class Race {
     if (Math.hypot(tx - r.x, tz - r.z) > 25) { r.x = tx; r.z = tz; } else { r.x = lerp(r.x, tx, k); r.z = lerp(r.z, tz, k); }
     r.yaw = r.yaw + angDiff(r.yaw, n.yaw) * k; r.f = n.f; r.vx = n.vx; r.vz = n.vz;
     this._locate(r); const S = r.seg || this.track, si = r.seg ? r.sIdx : r.idx;
-    r.y = lerp(r.y, S.heightAt(si, r.x, r.z), 0.5); r.visAir = n.ay || 0; r.trickT = n.tk ? 0.2 : 0;
+    { const gy = Math.max(S.heightAt(si, r.x, r.z), this.track.groundHeight(r.x, r.z) + 0.03); r.y = gy > r.y ? gy : lerp(r.y, gy, 0.6); } r.visAir = n.ay || 0; r.trickT = n.tk ? 0.2 : 0;
     r.pitch = lerp(r.pitch, -Math.atan(S.ty[si] * Math.cos(r.yaw - S.heading(si))), 0.2);
     r.drift = !!n.dr; r.driftDir = n.dd || 0; r.spin = n.sp ? 0.1 : 0; r.torp = n.tp ? 0.1 : 0; if (n.sp) { r.spinAng = (r.spinAng || 0) + dt * 10; } else if (r.spinAng) { r.spinAng = 0; } r.shield = n.sh ? 1 : 0; r.boost = n.b ? 0.1 : 0; r.charge = n.ch || 0;
     r.lap = n.lap; r.prog = n.prog; r.steer = n.st || 0;

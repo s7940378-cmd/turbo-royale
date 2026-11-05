@@ -110,7 +110,7 @@ Track.prototype.genFeatures = function () {
   const pick = () => { if (!free.length) return -1; const k = Math.floor(r() * free.length); const i = free[k]; free.splice(Math.max(0, k - 4), 9); return i; };
   t.gates = []; t.ramps = []; t.extraPads = []; t.extraBoxes = []; t.patrols = []; t.barrels = [];
   for (const b of t.branches) {
-    if (b.kind === 'short') { t.gates.push({ b, si: Math.round(b.N * 0.3), open: 0 }); t.patrols.push({ b, si: Math.round(b.N * 0.62), amp: b.half - 1.6, w: 1.5, ph: r() * 6, kind: 'roller' }); }
+    if (b.kind === 'short') { t.patrols.push({ b, si: Math.round(b.N * 0.62), amp: b.half - 1.6, w: 1.5, ph: r() * 6, kind: 'roller' }); }
     else { t.ramps.push({ b, si: Math.round(b.N * 0.5) }); t.extraPads.push({ b, i: Math.round(b.N * 0.22), lat: 0 }, { b, i: Math.round(b.N * 0.8), lat: 0 }); t.extraBoxes.push({ b, si: Math.round(b.N * 0.66) }); }
   }
   for (let k = 0; k < 2; k++) { const i = pick(); if (i >= 0) t.patrols.push({ b: null, si: i, amp: t.half - 2, w: 1.1 + r() * 0.5, ph: r() * 6, kind: 'roller' }); }
@@ -183,6 +183,20 @@ Track.prototype.buildFeatures = function (R, quality) {
     meshes.push(R.mesh(R.upload(g2)));
   }
   return meshes;
+};
+// Ground height under a terrain vertex: always below every road surface nearby, so the
+// ground can never poke through a road (main track, shortcut or jump route).
+Track.prototype.terrainBase = function (x, z) {
+  const surf = [this, ...(this.branches || [])]; let D = 1e9, nearH = 0, minH = Infinity;
+  for (const P of surf) {
+    const closed = P === this, st = closed ? 3 : 2; let bd = 1e18, bi = 0;
+    for (let i = 0; i < P.N; i += st) { const d = (P.px[i] - x) ** 2 + (P.pz[i] - z) ** 2; if (d < bd) { bd = d; bi = i; } }
+    for (let k = -st; k <= st; k++) { const i = closed ? this.wrap(bi + k) : clamp(bi + k, 0, P.N - 1); const d = (P.px[i] - x) ** 2 + (P.pz[i] - z) ** 2; if (d < bd) { bd = d; bi = i; } }
+    const d = Math.sqrt(bd); const h = P.heightAt(bi, x, z);
+    if (d < D) { D = d; nearH = h; }
+    if (d < P.wallD + 7) minH = Math.min(minH, h);
+  }
+  return [D, minH < Infinity ? minH - 0.35 : nearH - 0.12, minH < Infinity];
 };
 // height/union terrain helper: nearest surface (main or branch) for a world point
 Track.prototype.surfaceNear = function (x, z, mainStep) {
