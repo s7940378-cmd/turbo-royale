@@ -118,7 +118,12 @@ Track.prototype.genFeatures = function () {
   // keep barrels well away from the item-box rows (boxes sit at these fractions of the lap)
   const nearBoxes = i => BOX_ROWS.some(fr => { const bi = Math.floor(fr * N); const rel = ((i - bi) % N + N) % N; return rel <= 25 || rel >= N - 60; });
   for (let k = free.length - 1; k >= 0; k--) if (nearBoxes(free[k])) free.splice(k, 1);
-  for (let k = 0; k < 2; k++) { const i = pick(); if (i < 0) continue; const lats = [-8, -3, 3, 8].sort(() => r() - 0.5).slice(0, 3); for (const lat of lats) { const p = t.point(i, lat); t.barrels.push({ x: p[0], y: p[1], z: p[2], i, on: true, t: 0 }); } }
+  // single barrels scattered at random spots and random positions across the road (never in a row)
+  for (let k = 0; k < 7; k++) {
+    const i0 = pick(); if (i0 < 0) continue; const i = t.wrap(i0 + Math.floor(r() * 6));
+    const side = r() < 0.5 ? -1 : 1, lat = side * (1.5 + r() * (t.half - 3.5));
+    const p = t.point(i, lat); t.barrels.push({ x: p[0], y: p[1], z: p[2], i, on: true, t: 0 });
+  }
 };
 // Union-of-corridors helpers
 Track.prototype.inBranchCorridor = function (x, z, except, margin) {
