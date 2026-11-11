@@ -65,7 +65,7 @@ class Race {
   _boxes() {
     this.boxes = []; if (!this.items) return;
     const t = this.track;
-    for (const fr of [0.14, 0.38, 0.62, 0.84]) {
+    for (const fr of BOX_ROWS) {
       const i = Math.floor(fr * t.N);
       for (const lat of [-7.5, -2.5, 2.5, 7.5]) {
         const p = t.point(i, lat); const m = this.R.mesh(this.props.box, { tex: this.tex.box, alpha: 0.9, emis: 0.25 });

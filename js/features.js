@@ -66,6 +66,7 @@ class Branch {
 }
 
 // ---- feature generation (deterministic per track) ----
+const BOX_ROWS = [0.14, 0.38, 0.62, 0.84];
 Track.prototype.genFeatures = function () {
   const t = this, N = t.N, r = rng(hashStr(t.def.id) + 77);
   t.branches = [];
@@ -114,6 +115,9 @@ Track.prototype.genFeatures = function () {
     else { t.ramps.push({ b, si: Math.round(b.N * 0.5) }); t.extraPads.push({ b, i: Math.round(b.N * 0.22), lat: 0 }, { b, i: Math.round(b.N * 0.8), lat: 0 }); t.extraBoxes.push({ b, si: Math.round(b.N * 0.66) }); }
   }
   for (let k = 0; k < 2; k++) { const i = pick(); if (i >= 0) t.patrols.push({ b: null, si: i, amp: t.half - 2, w: 1.1 + r() * 0.5, ph: r() * 6, kind: 'roller' }); }
+  // keep barrels well away from the item-box rows (boxes sit at these fractions of the lap)
+  const nearBoxes = i => BOX_ROWS.some(fr => { const bi = Math.floor(fr * N); const rel = ((i - bi) % N + N) % N; return rel <= 25 || rel >= N - 60; });
+  for (let k = free.length - 1; k >= 0; k--) if (nearBoxes(free[k])) free.splice(k, 1);
   for (let k = 0; k < 2; k++) { const i = pick(); if (i < 0) continue; const lats = [-8, -3, 3, 8].sort(() => r() - 0.5).slice(0, 3); for (const lat of lats) { const p = t.point(i, lat); t.barrels.push({ x: p[0], y: p[1], z: p[2], i, on: true, t: 0 }); } }
 };
 // Union-of-corridors helpers
