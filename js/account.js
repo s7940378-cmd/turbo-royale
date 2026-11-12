@@ -45,6 +45,19 @@ const Account = {
       p.daily = { date: k, list: pick.map(id => ({ id, n: 0, done: false })) };
     }
   },
+  ensurePeriods() {
+    this.ensureDaily(); const p = this.profile;
+    for (const tier of CH_TIERS) {
+      if (tier.key === 'daily') continue;
+      const per = chPeriod(tier.key), k = 'ch_' + tier.key;
+      if (!p[k] || p[k].key !== per.key) {
+        const r = rng(hashStr(per.key + (p.tag || 'x') + (p.created || 0)));
+        const pool = tier.pool().slice(); const pick = [];
+        while (pick.length < tier.count && pool.length) { const i = Math.floor(r() * pool.length); pick.push(pool.splice(i, 1)[0].id); }
+        p[k] = { key: per.key, list: pick.map(id => ({ id, n: 0, done: false })) };
+      }
+    }
+  },
   owns(id) { return this.profile.owned.includes(id); },
   save() { try { localStorage.setItem('tr_profile', JSON.stringify(this.profile)); } catch (e) { } },
   // grant rewards; returns summary
@@ -53,18 +66,28 @@ const Account = {
     let coins, xp;
     if (res.mode === 'tt') { coins = 80; xp = 450; if (res.time && (!p.best[res.track] || res.time < p.best[res.track])) { if (p.best[res.track]) { coins += 120; xp += 200; } p.best[res.track] = +res.time.toFixed(2); res.newBest = true; } }
     else { const i = Math.round((place - 1) / Math.max(1, n - 1) * 7); coins = PLACE_COINS[i] || 40; xp = PLACE_XP[i] || 300; }
-    xp += res.stats.rockethit * 40 + res.stats.driftboost * 10 + res.stats.box * 5;
+    xp += (res.stats.rockethit || 0) * 40 + (res.stats.driftboost || 0) * 10 + (res.stats.box || 0) * 5;
     p.stats.races++; if (place === 1 && res.mode !== 'tt') p.stats.wins++; if (place <= 3 && res.mode !== 'tt') p.stats.podiums++;
-    // challenges
+    // challenges (daily, 3-day, weekly)
     const st = Object.assign({}, res.stats, { partyrace: res.party ? 1 : 0 });
+    const won = res.mode !== 'tt' && place === 1;
+    if (res.mode === 'tt') { st.win = 0; st.podium = 0; }
+    st.hardwin = won && (window.App && App.settings.difficulty === 'hard') ? 1 : 0;
+    st.nohitwin = won && !(res.stats.hitsTaken > 0) ? 1 : 0;
+    st.kowin = won && res.mode === 'ko' ? 1 : 0;
     const doneNow = [];
-    this.ensureDaily();
-    for (const c of p.daily.list) {
-      if (c.done) continue; const def = CHALLENGES.find(d => d.id === c.id); if (!def) continue;
-      c.n = Math.min(def.goal, c.n + (st[def.stat] || 0));
-      if (c.n >= def.goal) { c.done = true; coins += 100; xp += 500; doneNow.push(def.text); }
+    this.ensurePeriods();
+    for (const tier of CH_TIERS) {
+      const set = tier.key === 'daily' ? p.daily : p['ch_' + tier.key];
+      for (const c of set.list) {
+        if (c.done) continue; const def = tier.pool().find(x => x.id === c.id); if (!def) continue;
+        if (def.stat === 'trackwin') { c.tracks = c.tracks || []; if (won && !c.tracks.includes(res.track)) c.tracks.push(res.track); c.n = Math.min(def.goal, c.tracks.length); }
+        else c.n = Math.min(def.goal, c.n + (st[def.stat] || 0));
+        if (c.n >= def.goal) { c.done = true; coins += tier.coins; xp += tier.xp; doneNow.push((tier.key === 'daily' ? '' : tier.name + ': ') + def.text); }
+      }
     }
     const before = this.level;
+    if (!isFinite(p.xp)) p.xp = 0; if (!isFinite(p.coins)) p.coins = 0;
     p.coins += coins; p.xp += xp;
     const unlocked = this.claimTiers();
     this.save();

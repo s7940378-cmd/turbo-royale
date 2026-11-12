@@ -125,6 +125,42 @@ const CHALLENGES = [
   { id: 'party1', text: 'Race with a party member', goal: 1, stat: 'partyrace' },
 ];
 
+// 3-day challenges (medium) and weekly challenges (very hard)
+const TRI_CHALLENGES = [
+  { id: 't_win3', text: 'Win 3 races', goal: 3, stat: 'win' },
+  { id: 't_drift30', text: 'Land 30 drift boosts', goal: 30, stat: 'driftboost' },
+  { id: 't_hit8', text: 'Hit rivals with items 8 times', goal: 8, stat: 'rockethit' },
+  { id: 't_short5', text: 'Drive all the way through 5 shortcuts', goal: 5, stat: 'shortcut' },
+  { id: 't_trick8', text: 'Land 8 trick boosts off ramps', goal: 8, stat: 'trick' },
+  { id: 't_pod5', text: 'Finish top 3 in 5 races', goal: 5, stat: 'podium' },
+  { id: 't_slip10', text: 'Slipstream behind rivals 10 times', goal: 10, stat: 'slip' },
+  { id: 't_box40', text: 'Smash 40 item boxes', goal: 40, stat: 'box' },
+  { id: 't_ko2', text: 'Survive to the final 3 in Knockout twice', goal: 2, stat: 'kotop3' },
+];
+const WEEK_CHALLENGES = [
+  { id: 'w_win12', text: 'Win 12 races', goal: 12, stat: 'win' },
+  { id: 'w_hard3', text: 'Win 3 races with bots on Hard', goal: 3, stat: 'hardwin' },
+  { id: 'w_nohit', text: 'Win a race without getting hit once', goal: 1, stat: 'nohitwin' },
+  { id: 'w_purple25', text: 'Land 25 Ultra (purple) drift boosts', goal: 25, stat: 'purple' },
+  { id: 'w_alltracks', text: 'Win on all 4 tracks', goal: 4, stat: 'trackwin' },
+  { id: 'w_hit40', text: 'Hit rivals with items 40 times', goal: 40, stat: 'rockethit' },
+  { id: 'w_ko2', text: 'Win 2 Knockouts (Victory Royale)', goal: 2, stat: 'kowin' },
+  { id: 'w_finish25', text: 'Finish 25 races', goal: 25, stat: 'finish' },
+  { id: 'w_trick30', text: 'Land 30 trick boosts', goal: 30, stat: 'trick' },
+];
+const CH_TIERS = [
+  { key: 'daily', name: 'Daily', pool: () => CHALLENGES, count: 4, xp: 500, coins: 100 },
+  { key: 'tri', name: '3-Day', pool: () => TRI_CHALLENGES, count: 3, xp: 1500, coins: 400 },
+  { key: 'week', name: 'Weekly', pool: () => WEEK_CHALLENGES, count: 3, xp: 5000, coins: 1500 },
+];
+const DAY_MS = 86400000;
+function chPeriod(tier) { // {key, end} for the current period of a tier (UTC)
+  const day = Math.floor(Date.now() / DAY_MS);
+  if (tier === 'tri') { const n = Math.floor(day / 3); return { key: 't' + n, end: (n + 1) * 3 * DAY_MS }; }
+  if (tier === 'week') { const n = Math.floor((day + 3) / 7); return { key: 'w' + n, end: ((n + 1) * 7 - 3) * DAY_MS }; } // weeks start Monday
+  return { key: new Date().toISOString().slice(0, 10), end: (day + 1) * DAY_MS };
+}
+
 // Tracks: control points [x, z, y], scaled ×S
 const TRACKS = [
   {

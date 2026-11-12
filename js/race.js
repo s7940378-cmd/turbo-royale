@@ -280,7 +280,7 @@ class Race {
     }
     if (r.airY > 0 || r.vy > 0) {
       r.vy -= 25 * dt; r.airY += r.vy * dt;
-      if (r.airY <= 0) { r.airY = 0; r.vy = 0; if (r.trick) { r.boost = Math.max(r.boost, 0.85 * st[3]); if (r.local) { Sfx.play('mini', 2); this.msg('', 'TRICK BOOST!', 0.9); } } r.trick = false; this._burst(r.x, r.y, r.z, 8, [0.9, 0.9, 0.9]); }
+      if (r.airY <= 0) { r.airY = 0; r.vy = 0; if (r.trick) { r.boost = Math.max(r.boost, 0.85 * st[3]); if (r.local) { this.stats.trick = (this.stats.trick || 0) + 1; Sfx.play('mini', 2); this.msg('', 'TRICK BOOST!', 0.9); } } r.trick = false; this._burst(r.x, r.y, r.z, 8, [0.9, 0.9, 0.9]); }
     }
     if (r.trickT > 0) r.trickT -= dt;
     r.y = gy > r.y ? gy : lerp(r.y, gy, 0.6); // never below the road surface
@@ -299,6 +299,7 @@ class Race {
     if (r.seg) {
       const b = r.seg; r.sIdx = b.nearest(r.x, r.z, r.sIdx, 14); const lb = b.lateral(r.sIdx, r.x, r.z);
       const past = (r.sIdx >= b.N - 1 && b.along(b.N - 1, r.x, r.z) > 0) || (r.sIdx <= 0 && b.along(0, r.x, r.z) < 0);
+      if (past && r.local && b.kind === 'short' && r.sIdx >= b.N - 1) this.stats.shortcut = (this.stats.shortcut || 0) + 1;
       if (past || (Math.abs(lb) > b.half + 1.5 && Math.abs(latM) < t.half + 1) || (Math.abs(lb) > b.wallD - 0.5 && Math.abs(latM) < t.wallD)) r.seg = null; else r.latB = lb;
     }
     if (!r.seg && t.branches) for (const b of t.branches) {
@@ -608,6 +609,7 @@ class Race {
   hit(r, kind, by) {
     if (r.torp > 0) return false;
     if (r.shield > 0) { r.shield = 0; if (r.local || this._near(r)) Sfx.play('pop'); this._burst(r.x, r.y + 1, r.z, 14, [0.4, 0.9, 1]); return false; }
+    if (r.local) this.stats.hitsTaken = (this.stats.hitsTaken || 0) + 1;
     this.spinOut(r, kind === 'rocket' || kind === 'boom' ? 1.25 : 0.95, kind === 'rocket' || kind === 'boom' ? 2 : 1); r.boost = 0; r.drift = false; r.charge = 0;
     if (kind === 'rocket') { r.vx *= 0.3; r.vz *= 0.3; }
     if (r.local) { Sfx.play('hit'); this.shake = 0.5; }

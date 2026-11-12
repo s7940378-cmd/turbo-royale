@@ -163,8 +163,8 @@ const App = window.App = {
   tickTimers() {
     const now = new Date(); const end = new Date(now); end.setUTCHours(24, 0, 0, 0); const s = Math.max(0, (end - now) / 1000);
     const txt = `${Math.floor(s / 3600)}h ${Math.floor(s % 3600 / 60)}m ${Math.floor(s % 60)}s`;
-    $('shopTimer').textContent = txt; $('chTimer').textContent = txt;
-    if (this._day && this._day !== todayKey()) { Account.ensureDaily(); if (this.tab === 'shop') this.renderShop(); if (this.tab === 'challenges') this.renderChallenges(); this.refreshTop(); }
+    $('shopTimer').textContent = txt; if (this.tab === 'challenges') this.tickChTimers();
+    if (this._day && this._day !== todayKey()) { Account.ensurePeriods(); if (this.tab === 'shop') this.renderShop(); if (this.tab === 'challenges') this.renderChallenges(); this.refreshTop(); }
     this._day = todayKey();
   },
   // ---------------- gamertag / settings ----------------
@@ -624,9 +624,20 @@ const App = window.App = {
   },
   // ---------------- challenges ----------------
   renderChallenges() {
-    Account.ensureDaily();
-    const icon = { finish: '🏁', win: '🏆', podium: '🥉', rockethit: '🚀', driftboost: '💨', itemuse: '🎁', box: '❓', kotop3: '🌀', pad: '⚡', purple: '💜', partyrace: '🎮' };
-    $('chList').innerHTML = Account.profile.daily.list.map(c => { const d = CHALLENGES.find(x => x.id === c.id); if (!d) return ''; return `<div class="ch ${c.done ? 'done' : ''}"><div class="ic">${c.done ? '✅' : icon[d.stat] || '⭐'}</div><div style="flex:1"><b>${esc(d.text)}</b><div class="bar"><i style="width:${c.n / d.goal * 100}%"></i></div></div><div class="rw">${c.n}/${d.goal}<br><span class="muted">+500 XP · +100 🪙</span></div></div>`; }).join('');
+    Account.ensurePeriods();
+    const p = Account.profile;
+    const icon = { finish: '🏁', win: '🏆', podium: '🥉', rockethit: '🚀', driftboost: '💨', itemuse: '🎁', box: '❓', kotop3: '🌀', pad: '⚡', purple: '💜', partyrace: '🎮', shortcut: '🔀', trick: '🤸', slip: '🌬', hardwin: '😤', nohitwin: '🛡', trackwin: '🗺', kowin: '👑' };
+    const tierCol = { daily: '#ffe14a', tri: '#5fd0ff', week: '#c25cff' };
+    $('chList').innerHTML = CH_TIERS.map(tier => {
+      const set = tier.key === 'daily' ? p.daily : p['ch_' + tier.key]; const per = chPeriod(tier.key);
+      const rows = set.list.map(c => { const dd = tier.pool().find(x => x.id === c.id); if (!dd) return '';
+        return `<div class="ch ${c.done ? 'done' : ''}" style="${c.done ? '' : 'border-left:4px solid ' + tierCol[tier.key]}"><div class="ic">${c.done ? '✅' : icon[dd.stat] || '⭐'}</div><div style="flex:1"><b>${esc(dd.text)}</b>${dd.stat === 'trackwin' && c.tracks && c.tracks.length ? `<div class="muted" style="font-size:12px">Won on: ${c.tracks.map(id => esc((TRACKS.find(t => t.id === id) || {}).name || id)).join(', ')}</div>` : ''}<div class="bar"><i style="width:${c.n / dd.goal * 100}%;background:${tierCol[tier.key]}"></i></div></div><div class="rw">${c.n}/${dd.goal}<br><span class="muted">+${tier.xp.toLocaleString()} XP · +${tier.coins.toLocaleString()} 🪙</span></div></div>`; }).join('');
+      return `<div class="row" style="justify-content:space-between;flex-wrap:wrap;margin:${tier.key === 'daily' ? 0 : 26}px 0 10px"><div><h2 class="disp" style="color:${tierCol[tier.key]}">${tier.name} challenges</h2><div class="subt" style="margin:0">${tier.key === 'daily' ? 'Quick goals' : tier.key === 'tri' ? 'Tougher goals, bigger rewards' : 'Very hard — huge rewards'} · each worth ${tier.xp.toLocaleString()} XP + ${tier.coins.toLocaleString()} coins</div></div><div class="timer">⏱ New in <span data-end="${per.end}"></span></div></div>${rows}`;
+    }).join('');
+    this.tickChTimers();
+  },
+  tickChTimers() {
+    document.querySelectorAll('#chList [data-end]').forEach(el => { const s = Math.max(0, (+el.dataset.end - Date.now()) / 1000); const dd = Math.floor(s / 86400); el.textContent = (dd ? dd + 'd ' : '') + `${Math.floor(s % 86400 / 3600)}h ${Math.floor(s % 3600 / 60)}m ${Math.floor(s % 60)}s`; });
   },
   // ---------------- leaderboard ----------------
   renderLeaderboard() {
