@@ -486,7 +486,8 @@ const App = window.App = {
   // ---------------- locker ----------------
   renderLocker() {
     const tabs = $('slotTabs'); tabs.innerHTML = '';
-    SLOTS.forEach(s => { const b = document.createElement('button'); b.className = 'chip' + (this.slot === s.id ? ' on' : ''); b.textContent = s.name; b.onclick = () => { this.slot = s.id; this.renderLocker(); }; tabs.appendChild(b); });
+    [{ id: 'presets', name: '★ Presets' }, ...SLOTS].forEach(s => { const b = document.createElement('button'); b.className = 'chip' + (this.slot === s.id ? ' on' : ''); b.textContent = s.name; b.onclick = () => { this.slot = s.id; this.editPreset = null; this.renderLocker(); }; tabs.appendChild(b); });
+    if (this.slot === 'presets') { this.renderPresets(); return; }
     const p = Account.profile; const grid = document.createElement('div'); grid.className = 'grid';
     const owned = CATALOG.filter(i => i.slot === this.slot && Account.owns(i.id));
     owned.forEach(it => grid.appendChild(this.itemCard(it.id, { sel: p.equip[this.slot] === it.id, onclick: () => {
@@ -503,6 +504,74 @@ const App = window.App = {
     hdr.appendChild(tot);
     body.appendChild(hdr); body.appendChild(grid);
     if (locked) { const m = document.createElement('p'); m.className = 'muted'; m.style.marginTop = '14px'; m.textContent = `${locked} more ${SLOTS.find(s => s.id === this.slot).name.toLowerCase()} item${locked > 1 ? 's' : ''} to unlock in the Item Shop and Turbo Pass.`; body.appendChild(m); }
+  },
+  // ---------------- presets ----------------
+  presets() {
+    const p = Account.profile;
+    if (!Array.isArray(p.presets)) p.presets = [];
+    while (p.presets.length < 6) p.presets.push({ name: 'Preset ' + (p.presets.length + 1), equip: Object.assign({}, p.equip) });
+    for (const ps of p.presets) { ps.name = safeTag(ps.name || 'Preset').slice(0, 18); ps.equip = Object.assign({}, DEFAULT_EQUIP, ps.equip || {}); for (const sl of SLOTS) if (!CAT[ps.equip[sl.id]] || !Account.owns(ps.equip[sl.id])) ps.equip[sl.id] = DEFAULT_EQUIP[sl.id]; }
+    return p.presets;
+  },
+  presetThumb(equip, el) {
+    const key = SLOTS.map(s => equip[s.id]).join('|');
+    this._pthumbs = this._pthumbs || {};
+    if (this._pthumbs[key]) { el.style.backgroundImage = `url(${this._pthumbs[key]})`; return; }
+    if (!this.TR) { el.textContent = '🏎'; return; }
+    try {
+      const TR = this.TR; const v = new KartView(TR, equip); v.update(0, 0, 0, 2.35, 0, 0, 0.3, 0, 0, {}); v.shadow.visible = false;
+      TR.render({ meshes: v.meshes, particles: [], fog: { color: [0, 0, 0], near: 100, far: 200 }, light: { dir: [0.45, 0.8, 0.4], sky: [0.7, 0.72, 0.85], ground: [0.35, 0.3, 0.45], sun: [0.65, 0.6, 0.55] }, sky: [0, 0, 0, 0] }, { x: 3.8, y: 2.6, z: 4.6, tx: 0, ty: 0.75, tz: 0, fov: 0.8, near: 0.1, far: 50 });
+      this._pthumbs[key] = TR.canvas.toDataURL(); el.style.backgroundImage = `url(${this._pthumbs[key]})`;
+    } catch (e) { el.textContent = '🏎'; }
+  },
+  renderPresets() {
+    const body = $('lockerGrid'); body.innerHTML = ''; const p = Account.profile; const list = this.presets();
+    const same = (a, b) => SLOTS.every(s => a[s.id] === b[s.id]);
+    if (this.editPreset !== null && this.editPreset !== undefined && list[this.editPreset]) {
+      // ----- editor -----
+      const k = this.editPreset, ps = list[k];
+      const hdr = document.createElement('div');
+      hdr.innerHTML = `<div class="row" style="gap:8px;margin-bottom:10px"><button class="btn sm" id="pBack">← Back</button><input class="inp" id="pName" maxlength="18" style="text-transform:none;letter-spacing:0"></div>
+        <div class="row" style="gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:6px"><div id="pThumb" style="width:150px;height:150px;border-radius:12px;background:rgba(0,0,0,.25);background-size:contain;background-repeat:no-repeat;background-position:center;flex:none"></div>
+        <div style="flex:1;min-width:200px">${this.statBars(kartStats(ps.equip).s)}${kartStats(ps.equip).offroad ? '<div class="muted" style="margin-top:4px">✔ Off-road ready</div>' : ''}
+        <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn sm y" id="pEquip">${same(ps.equip, p.equip) ? '✔ Equipped' : 'Equip this preset'}</button><button class="btn sm" id="pCopy">Copy my current loadout</button></div></div></div>
+        <p class="muted" style="margin-bottom:6px">Pick each part for this preset. It won't change what you're using until you press Equip.</p>`;
+      body.appendChild(hdr);
+      const nm = $('pName'); nm.value = ps.name; nm.oninput = () => { ps.name = safeTag(nm.value).slice(0, 18) || 'Preset'; Account.save(); };
+      $('pBack').onclick = () => { this.editPreset = null; this.renderLocker(); };
+      $('pEquip').onclick = () => { p.equip = Object.assign({}, ps.equip); Account.save(); Sfx.play('buy'); this.lobbyKarts(); Net.setParty(); this.toast(`Equipped preset <b>${esc(ps.name)}</b>`); this.renderPresets(); };
+      $('pCopy').onclick = () => { ps.equip = Object.assign({}, p.equip); Account.save(); Sfx.play('click'); this.renderPresets(); };
+      this.presetThumb(ps.equip, $('pThumb'));
+      for (const sl of SLOTS) {
+        const sec = document.createElement('div'); sec.innerHTML = `<div class="sec" style="font-size:18px;margin:14px 0 6px">${sl.name}</div>`;
+        const row = document.createElement('div'); row.className = 'grid'; row.style.gridTemplateColumns = 'repeat(auto-fill,minmax(96px,1fr))';
+        CATALOG.filter(i => i.slot === sl.id && Account.owns(i.id)).forEach(it => row.appendChild(this.itemCard(it.id, { sel: ps.equip[sl.id] === it.id, onclick: () => {
+          ps.equip[sl.id] = it.id; Account.save(); Sfx.play('click'); if (sl.id === 'horn') Sfx.play('horn', it.kind);
+          const y = body.scrollTop; this.renderPresets(); body.scrollTop = y;
+        } })));
+        sec.appendChild(row); body.appendChild(sec);
+      }
+      body.querySelectorAll('.card .eq').forEach(e => e.textContent = 'IN PRESET');
+      return;
+    }
+    // ----- list -----
+    const intro = document.createElement('div');
+    intro.innerHTML = `<div class="disp" style="font-size:26px">Presets</div><div class="muted" style="margin-bottom:12px">Save whole loadouts and switch between them in one click. Press Edit to customize any preset.</div>`;
+    body.appendChild(intro);
+    const grid = document.createElement('div'); grid.className = 'grid'; grid.style.gridTemplateColumns = 'repeat(auto-fill,minmax(150px,1fr))';
+    list.forEach((ps, k) => {
+      const on = same(ps.equip, p.equip); const st = kartStats(ps.equip).s;
+      const d = document.createElement('div'); d.className = 'card' + (on ? ' sel' : ''); d.style.background = 'linear-gradient(160deg,#3a5bd9,#2a1a7a)'; d.style.aspectRatio = 'auto'; d.style.cursor = 'default';
+      d.innerHTML = `<div class="th" style="height:120px;flex:none"></div><div class="info"><b></b><small>${st.map((v, i) => STAT_NAMES[i][0] + Math.round(v * 100)).join(' · ')}</small>
+        <div class="row" style="gap:5px;margin-top:7px;flex-wrap:wrap"><button class="btn sm y" data-a="eq">${on ? '✔' : 'Equip'}</button><button class="btn sm" data-a="ed">Edit</button><button class="btn sm" data-a="sv" title="Save your current loadout into this preset">Save</button></div></div>${on ? '<div class="eq">EQUIPPED</div>' : ''}`;
+      d.querySelector('b').textContent = ps.name;
+      this.presetThumb(ps.equip, d.querySelector('.th'));
+      d.querySelector('[data-a=eq]').onclick = () => { p.equip = Object.assign({}, ps.equip); Account.save(); Sfx.play('buy'); this.lobbyKarts(); Net.setParty(); this.toast(`Equipped preset <b>${esc(ps.name)}</b>`); this.renderPresets(); };
+      d.querySelector('[data-a=ed]').onclick = () => { this.editPreset = k; Sfx.play('click'); this.renderPresets(); $('lockerGrid').scrollTop = 0; };
+      d.querySelector('[data-a=sv]').onclick = () => { ps.equip = Object.assign({}, p.equip); Account.save(); Sfx.play('click'); this.toast(`Saved your loadout to <b>${esc(ps.name)}</b>`); this.renderPresets(); };
+      grid.appendChild(d);
+    });
+    body.appendChild(grid);
   },
   // ---------------- shop ----------------
   shopToday() {
@@ -532,9 +601,9 @@ const App = window.App = {
     if ($('bHear')) $('bHear').onclick = () => { Sfx.init(); Sfx.play('horn', it.kind); };
     if ($('bBuy')) $('bBuy').onclick = () => {
       const p = Account.profile; if (p.coins < price || Account.owns(id)) return;
-      p.coins -= price; p.owned.push(id); p.equip[it.slot] = id; Account.save(); Sfx.play('buy');
+      p.coins -= price; p.owned.push(id); Account.save(); Sfx.play('buy');
       this.closeModal(); this.refreshTop(); this.renderShop(); this.lobbyKarts(); Net.setParty();
-      this.toast(`🛒 <b>${esc(it.name)}</b> purchased and equipped!`);
+      this.toast(`🛒 <b>${esc(it.name)}</b> purchased! Equip it from the Locker.`, 5000, [{ label: 'Equip now', cls: 'y', fn: () => { Account.profile.equip[it.slot] = id; Account.save(); this.lobbyKarts(); Net.setParty(); this.toast('Equipped <b>' + esc(it.name) + '</b>'); } }]);
     };
   },
   // ---------------- pass ----------------
