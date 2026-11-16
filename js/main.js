@@ -288,7 +288,7 @@ const App = window.App = {
     const s = this.sel; let mode = s.mode; if (multi && mode === 'tt') mode = 'gp';
     const seed = (Math.random() * 1e9) | 0; const r = rng(seed);
     const humans = multi ? Net.members().slice(0, 8).map(m => ({ id: m.peer, tag: m.sameTab ? Account.profile.tag : safeTag(m.presence.tag), cos: m.sameTab ? packCos(Account.profile.equip) : m.presence.cos })) : [{ id: 'me', tag: Account.profile.tag, cos: packCos(Account.profile.equip) }];
-    const nb = mode === 'tt' ? 0 : Math.max(0, ((multi && Net.room) || this.settings.quality === 'low' ? 8 : 12) - humans.length);
+    const nb = mode === 'tt' || humans.length >= 4 ? 0 : Math.max(0, 8 - humans.length); // 8 racers max; parties of 4+ race without bots
     const names = BOT_NAMES.slice().sort(() => r() - 0.5);
     const bots = [];
     for (let i = 0; i < nb; i++) {
@@ -407,7 +407,7 @@ const App = window.App = {
       el.innerHTML = `<div class="row" style="justify-content:space-between"><div><div class="muted">Party code</div><div class="code">${esc(Net.code)}</div></div><button class="btn sm" id="cpCode">Copy code</button></div>
         <button class="btn b" style="width:100%;margin-top:8px" id="cpLink">🔗 Copy invite link</button>
         <div class="sep"></div>${mem.map(m => `<div class="mem"><div class="av" style="background:${m.sameTab ? '#ffc928;color:#2a1a00' : '#2a7fff'}">${m === lead ? '👑' : esc(safeTag(m.presence.tag)[0])}</div><div class="nm">${esc(m.sameTab ? Account.profile.tag : safeTag(m.presence.tag))}${m.sameTab ? ' (you)' : ''}</div><div class="st ${m === lead || m.presence.ready ? 'rdy' : ''}">${m === lead ? 'LEADER' : m.presence.race && m.presence.k ? 'RACING' : m.presence.ready ? 'READY' : 'NOT READY'}</div></div>`).join('')}
-        <p class="muted" style="margin:6px 0">${mem.length}/8 · ${Net.isLeader() ? (mem.length > 1 ? 'You pick the mode and start the race. Empty spots are filled with bots.' : 'Waiting for friends — send them the invite link. You can still race solo.') : 'Waiting for the leader to start.'}</p>
+        <p class="muted" style="margin:6px 0">${mem.length}/8 · ${Net.isLeader() ? (mem.length > 1 ? 'You pick the mode and start the race. Up to 8 racers. Bots fill empty spots unless 4 or more players are in the party.' : 'Waiting for friends — send them the invite link. You can still race solo.') : 'Waiting for the leader to start.'}</p>
         <button class="btn sm r" id="lvParty">Leave party</button>`;
       $('lvParty').onclick = () => { Net.leaveParty(); this.sessionPts = 0; this.sessionWins = 0; this.toast('Left the party'); this.lobbyKarts(); this.renderPlay(); };
       const copy = (txt, ok) => { const done = () => this.toast(ok); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(done, () => this.modal(`<h3>Copy this</h3><input class="inp" style="width:100%;letter-spacing:0;text-transform:none" value="${esc(txt)}" onfocus="this.select()"><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn y" onclick="App.closeModal()">Done</button></div>`)); };
