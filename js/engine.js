@@ -110,36 +110,58 @@ class Geo {
     return this;
   }
   // cylinder along axis ('x','y','z'), centered
-  cyl(r, h, seg, col, axis, x, y, z, capCol, r2) {
-    x = x || 0; y = y || 0; z = z || 0; r2 = r2 === undefined ? r : r2; axis = axis || 'y';
-    const map = (a, b, c) => axis === 'y' ? [x + a, y + b, z + c] : axis === 'x' ? [x + b, y + a, z + c] : [x + a, y + c, z + b];
-    const H = h / 2; capCol = capCol || col;
-    for (let i = 0; i < seg; i++) {
-      const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2;
-      const c0 = Math.cos(a0), s0 = Math.sin(a0), c1 = Math.cos(a1), s1 = Math.sin(a1);
-      const p0 = map(c0 * r, -H, s0 * r), p1 = map(c1 * r, -H, s1 * r), p2 = map(c1 * r2, H, s1 * r2), p3 = map(c0 * r2, H, s0 * r2);
-      // axis swap is a reflection → flip winding for x/z
-      const ct = map(0, H, 0), cb = map(0, -H, 0);
-      if (axis === 'y') {
-        this.quad(p0, p3, p2, p1, col); if (r2 > 0) this.tri(ct, p2, p3, capCol); this.tri(cb, p0, p1, capCol);
-      } else {
-        this.quad(p1, p2, p3, p0, col); if (r2 > 0) this.tri(ct, p3, p2, capCol); this.tri(cb, p1, p0, capCol);
+  // box with bevelled, smooth-shaded edges (looks rounded instead of blocky)
+  rbox(w, h, d, col, x, y, z, topCol) {
+    x = x || 0; y = y || 0; z = z || 0; const X = w / 2, Y = h / 2, Z = d / 2, b = Math.min(0.09, 0.3 * Math.min(w, h, d));
+    if (b < 0.012) return this.box(w, h, d, col, x, y, z, topCol);
+    const cT = topCol || col, cB = shade(col, 0.7);
+    const P = (ax, sx, sy, sz) => ({ p: [x + sx * (ax === 0 ? X : X - b), y + sy * (ax === 1 ? Y : Y - b), z + sz * (ax === 2 ? Z : Z - b)], n: [ax === 0 ? sx : 0, ax === 1 ? sy : 0, ax === 2 ? sz : 0], c: ax === 1 ? (sy > 0 ? cT : cB) : col });
+    const T = (A, B, C) => { const ux = B.p[0] - A.p[0], uy = B.p[1] - A.p[1], uz = B.p[2] - A.p[2], vx = C.p[0] - A.p[0], vy = C.p[1] - A.p[1], vz = C.p[2] - A.p[2];
+      const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx, ox = A.n[0] + B.n[0] + C.n[0], oy = A.n[1] + B.n[1] + C.n[1], oz = A.n[2] + B.n[2] + C.n[2];
+      const L = nx * ox + ny * oy + nz * oz < 0 ? [A, C, B] : [A, B, C]; for (const q of L) this.vert(q.p[0], q.p[1], q.p[2], q.n[0], q.n[1], q.n[2], q.c); };
+    const Q = (A, B, C, D) => { T(A, B, C); T(A, C, D); };
+    for (const s of [-1, 1]) { // faces
+      Q(P(0, s, -1, -1), P(0, s, 1, -1), P(0, s, 1, 1), P(0, s, -1, 1)); Q(P(1, -1, s, -1), P(1, 1, s, -1), P(1, 1, s, 1), P(1, -1, s, 1)); Q(P(2, -1, -1, s), P(2, 1, -1, s), P(2, 1, 1, s), P(2, -1, 1, s));
+      for (const t of [-1, 1]) { // edges
+        Q(P(0, s, t, -1), P(0, s, t, 1), P(1, s, t, 1), P(1, s, t, -1)); Q(P(0, s, -1, t), P(0, s, 1, t), P(2, s, 1, t), P(2, s, -1, t)); Q(P(1, -1, s, t), P(1, 1, s, t), P(2, 1, s, t), P(2, -1, s, t));
+        for (const u of [-1, 1]) T(P(0, s, t, u), P(1, s, t, u), P(2, s, t, u)); // corners
       }
     }
     return this;
   }
+  // quad with per-vertex normals (smooth shading)
+  quadN(a, b, c, d, na, nb, nc, nd, col) { this.vert(a[0], a[1], a[2], na[0], na[1], na[2], col); this.vert(b[0], b[1], b[2], nb[0], nb[1], nb[2], col); this.vert(c[0], c[1], c[2], nc[0], nc[1], nc[2], col); this.vert(a[0], a[1], a[2], na[0], na[1], na[2], col); this.vert(c[0], c[1], c[2], nc[0], nc[1], nc[2], col); this.vert(d[0], d[1], d[2], nd[0], nd[1], nd[2], col); }
+  // cylinder along axis ('x','y','z'), centered; smooth-shaded sides, flat caps
+  cyl(r, h, seg, col, axis, x, y, z, capCol, r2) {
+    x = x || 0; y = y || 0; z = z || 0; r2 = r2 === undefined ? r : r2; axis = axis || 'y';
+    const mp = (a, b, c) => axis === 'y' ? [a, b, c] : axis === 'x' ? [b, a, c] : [a, c, b];
+    const map = (a, b, c) => { const q = mp(a, b, c); return [x + q[0], y + q[1], z + q[2]]; };
+    const H = h / 2; capCol = capCol || col; const sl = (r - r2) / (h || 1);
+    for (let i = 0; i < seg; i++) {
+      const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2;
+      const c0 = Math.cos(a0), s0 = Math.sin(a0), c1 = Math.cos(a1), s1 = Math.sin(a1);
+      const p0 = map(c0 * r, -H, s0 * r), p1 = map(c1 * r, -H, s1 * r), p2 = map(c1 * r2, H, s1 * r2), p3 = map(c0 * r2, H, s0 * r2);
+      const n0 = mp(c0, sl, s0), n1 = mp(c1, sl, s1);
+      const ct = map(0, H, 0), cb = map(0, -H, 0);
+      if (axis === 'y') { this.quadN(p0, p3, p2, p1, n0, n0, n1, n1, col); if (r2 > 0) this.tri(ct, p2, p3, capCol); this.tri(cb, p0, p1, capCol); }
+      else { this.quadN(p1, p2, p3, p0, n1, n1, n0, n0, col); if (r2 > 0) this.tri(ct, p3, p2, capCol); this.tri(cb, p1, p0, capCol); }
+    }
+    return this;
+  }
+  // smooth-shaded sphere / ellipsoid
   sphere(r, ws, hs, col, x, y, z, sy) {
     x = x || 0; y = y || 0; z = z || 0; sy = sy || 1;
+    const N = (t, p) => [Math.sin(t) * Math.cos(p), Math.cos(t) / sy, Math.sin(t) * Math.sin(p)];
+    const P = (t, p) => [x + r * Math.sin(t) * Math.cos(p), y + r * Math.cos(t) * sy, z + r * Math.sin(t) * Math.sin(p)];
+    const V = (q, n) => this.vert(q[0], q[1], q[2], n[0], n[1], n[2], col);
     for (let j = 0; j < hs; j++) {
       const t0 = j / hs * Math.PI, t1 = (j + 1) / hs * Math.PI;
       for (let i = 0; i < ws; i++) {
         const p0 = i / ws * Math.PI * 2, p1 = (i + 1) / ws * Math.PI * 2;
-        const P = (t, p) => [x + r * Math.sin(t) * Math.cos(p), y + r * Math.cos(t) * sy, z + r * Math.sin(t) * Math.sin(p)];
-        const a = P(t0, p0), b = P(t0, p1), c = P(t1, p1), d = P(t1, p0);
-        if (j === 0) this.tri(a, c, d, col); else if (j === hs - 1) this.tri(a, b, d, col); else this.quad(a, b, c, d, col);
+        const a = P(t0, p0), b = P(t0, p1), c = P(t1, p1), d = P(t1, p0), na = N(t0, p0), nb = N(t0, p1), nc = N(t1, p1), nd = N(t1, p0);
+        if (j === 0) { V(a, na); V(c, nc); V(d, nd); } else if (j === hs - 1) { V(a, na); V(b, nb); V(d, nd); } else this.quadN(a, b, c, d, na, nb, nc, nd, col);
       }
     }
-    // fix winding: sphere tri order above is outward? ensure by normal check done in tri via cross; we rely on doubleSided=false; verify via flip
     return this;
   }
   cone(r, h, seg, col, x, y, z) { return this.cyl(r, h, seg, col, 'y', x, y + h / 2, z, col, 0); }

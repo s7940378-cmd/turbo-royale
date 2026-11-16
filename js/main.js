@@ -45,7 +45,7 @@ const App = window.App = {
     if (raw > 0.25 || document.hidden) return;
     this._ft = this._ft === undefined ? raw : this._ft * 0.95 + raw * 0.05;
     this._rt = (this._rt || 0) + raw; if (this._rt < 1.5) return; this._rt = 0;
-    const max = this.settings.quality === 'low' ? 1 : Math.min(window.devicePixelRatio || 1, 1.5), min = 0.55;
+    const max = this.settings.quality === 'low' ? 1 : Math.min(window.devicePixelRatio || 1, 1.5), min = 0.7;
     const R = this.R; if (R.pixelRatio > max) R.pixelRatio = max;
     R.lowQ = this.settings.quality === 'low' || !!this._autoLow;
     if (this._ft > 1 / 30 && R.pixelRatio <= min + 0.01) this._autoLow = true; // still slow at the lowest resolution: use the cheaper shader

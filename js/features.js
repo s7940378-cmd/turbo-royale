@@ -115,10 +115,10 @@ Track.prototype.genFeatures = function () {
   const pick = () => { if (!free.length) return -1; const k = Math.floor(r() * free.length); const i = free[k]; free.splice(Math.max(0, k - 4), 9); return i; };
   t.gates = []; t.ramps = []; t.extraPads = []; t.extraBoxes = []; t.patrols = []; t.barrels = [];
   for (const b of t.branches) {
-    if (b.kind === 'short') { t.patrols.push({ b, si: Math.round(b.N * 0.62), amp: b.half - 1.6, w: 1.5, ph: r() * 6, kind: 'roller' }); }
+    if (b.kind === 'short') { /* no moving obstacles */ }
     else { t.ramps.push({ b, si: Math.round(b.N * 0.5) }); t.extraPads.push({ b, i: Math.round(b.N * 0.22), lat: 0 }, { b, i: Math.round(b.N * 0.8), lat: 0 }); t.extraBoxes.push({ b, si: Math.round(b.N * 0.66) }); }
   }
-  for (let k = 0; k < 2; k++) { const i = pick(); if (i >= 0) t.patrols.push({ b: null, si: i, amp: t.half - 2, w: 1.1 + r() * 0.5, ph: r() * 6, kind: 'roller' }); }
+  for (let k = 0; k < 0; k++) { const i = pick(); if (i >= 0) t.patrols.push({ b: null, si: i, amp: t.half - 2, w: 1.1 + r() * 0.5, ph: r() * 6, kind: 'roller' }); }
   // keep barrels well away from the item-box rows (boxes sit at these fractions of the lap)
   const nearBoxes = i => BOX_ROWS.some(fr => { const bi = Math.floor(fr * N); const rel = ((i - bi) % N + N) % N; return rel <= 25 || rel >= N - 60; });
   for (let k = free.length - 1; k >= 0; k--) if (nearBoxes(free[k])) free.splice(k, 1);

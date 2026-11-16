@@ -5,11 +5,11 @@ const Textures = (() => {
   function get(R) {
     let t = by.get(R); if (t) return t;
     t = {}; by.set(R, t);
-    t.road = R.texture(mkCanvas(128, 256, (c, w, h) => {
-      c.fillStyle = '#fff'; c.fillRect(0, 0, w, h);
-      const r = rng(7); for (let i = 0; i < 1600; i++) { const v = 200 + r() * 55 | 0; c.fillStyle = `rgb(${v},${v},${v})`; c.fillRect(r() * w, r() * h, 2, 2); }
-      c.fillStyle = '#fff'; c.fillRect(4, 0, 5, h); c.fillRect(w - 9, 0, 5, h);
-      c.globalAlpha = 0.5; c.fillRect(w / 2 - 2, 0, 4, h / 2); c.globalAlpha = 1;
+    t.road = R.texture(mkCanvas(512, 1024, (c, w, h) => {
+      c.fillStyle = '#f4f4f4'; c.fillRect(0, 0, w, h);
+      const r = rng(7); for (let i = 0; i < 26000; i++) { const v = 222 + r() * 33 | 0; c.fillStyle = `rgb(${v},${v},${v})`; c.fillRect(r() * w, r() * h, 1.5, 1.5); }
+      c.fillStyle = '#fff'; c.fillRect(16, 0, 18, h); c.fillRect(w - 34, 0, 18, h);
+      c.globalAlpha = 0.6; c.fillRect(w / 2 - 7, 0, 14, h / 2); c.globalAlpha = 1;
     }), true);
     t.curb = R.texture(mkCanvas(32, 64, (c, w, h) => { c.fillStyle = '#e9302c'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.fillRect(0, 0, w, h / 2); }), true);
     t.wall = R.texture(mkCanvas(64, 64, (c, w, h) => { c.fillStyle = '#fff'; c.fillRect(0, 0, w, h); c.fillStyle = '#bbb'; c.fillRect(0, h - 10, w, 10); c.fillStyle = '#999'; c.fillRect(0, 0, w, 6); }), true);
