@@ -71,7 +71,7 @@ Track.prototype.genFeatures = function () {
   const t = this, N = t.N, r = rng(hashStr(t.def.id) + 77);
   t.branches = [];
   const theme = t.def.theme;
-  const scType = { meadow: 'dirt', desert: 'tunnel', snow: 'ice', neon: 'tunnel' }[theme] || 'dirt';
+  const scType = { meadow: 'dirt', desert: 'tunnel', snow: 'ice', neon: 'tunnel', volcano: 'tunnel', candy: 'dirt' }[theme] || 'dirt';
   // 1) shortcut: chord across the inside of the biggest bend
   let best = null;
   for (let len = Math.round(N * 0.1); len <= Math.round(N * 0.26); len += Math.max(4, Math.round(N * 0.015))) {

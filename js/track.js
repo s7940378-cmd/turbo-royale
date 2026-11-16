@@ -170,7 +170,7 @@ class Track {
       let col = mixc(c1, c2, nn);
       const hRel = y - (this.py[0] || 0);
       if (d > this.wallD + 10) col = mixc(col, c3, clamp((hRel - 6) / 20, 0, 1) * 0.8);
-      if (snowCap && hRel > 26) col = mixc(col, hexc(0xffffff), clamp((hRel - 26) / 8, 0, 1));
+      if (snowCap && hRel > 26) col = mixc(col, hexc(T.capCol || 0xffffff, T.capCol ? 0.7 : 0), clamp((hRel - 26) / 8, 0, 1));
       if (this.def.theme === 'neon') { const gx = Math.abs(((x / 12) % 1 + 1) % 1 - 0.5) < 0.04 || Math.abs(((z / 12) % 1 + 1) % 1 - 0.5) < 0.04; if (gx && d > this.wallD + 3) col = hexc(0x6a2cff, 0.7); }
       data.set([x, y, z, nx, ny, nz, col[0], col[1], col[2], col[3] || 0, 0, 0], o); o += 12;
     };
@@ -180,7 +180,7 @@ class Track {
     meshes.push(R.mesh(R.upload(this._scenery(quality))));
     meshes.push(...this.buildFeatures(R, quality));
     // sky dome
-    const sky = new Geo(); const top = T.neon ? hexc(0x05020f, 1) : hexc(0x2f7de0, 1); const hor = [...T.fog, 1];
+    const sky = new Geo(); const top = T.skyTop ? hexc(T.skyTop, 1) : T.neon ? hexc(0x05020f, 1) : hexc(0x2f7de0, 1); const hor = [...T.fog, 1];
     for (let j = 0; j < 6; j++) for (let i = 0; i < 16; i++) {
       const t0 = j / 6 * Math.PI / 2, t1 = (j + 1) / 6 * Math.PI / 2, p0 = i / 16 * Math.PI * 2, p1 = (i + 1) / 16 * Math.PI * 2, r = 900;
       const P = (t, p) => [Math.cos(t) * Math.cos(p) * r, Math.sin(t) * r * 0.6 - 60, Math.cos(t) * Math.sin(p) * r];
@@ -230,6 +230,16 @@ class Track {
       } else if (T.props === 'pines') {
         if (r() < 0.85) { g.cyl(0.35, 2, 5, hexc(0x6b4a2a), 'y', 0, 1, 0); const pc = hexc(0x1f6b45); for (let k = 0; k < 3; k++) { g.cone(2.6 - k * 0.7, 2.6, 7, pc, 0, 1.6 + k * 1.6, 0); g.cone(2.2 - k * 0.6, 0.6, 7, hexc(0xffffff), 0, 3.4 + k * 1.6, 0); } }
         else { g.sphere(1.0, 6, 4, hexc(0xffffff), 0, 0.9, 0); g.sphere(0.75, 6, 4, hexc(0xffffff), 0, 2.2, 0); g.sphere(0.5, 6, 4, hexc(0xffffff), 0, 3.2, 0); g.cone(0.1, 0.5, 4, hexc(0xff8a1c), 0, 3.15, 0.45); }
+      } else if (T.props === 'lava') {
+        const q = r();
+        if (q < 0.5) { const rc = mixc(hexc(0x2a2222), hexc(0x4a3a36), r()); g.sphere(1.8 + r() * 2.2, 6, 4, rc, 0, 0.5, 0, 0.8); g.sphere(1.1, 5, 3, shade(rc, 0.8), 1.9, 0.3, 0.6, 0.7); }
+        else if (q < 0.8) { for (let k = 0; k < 10; k++) { const a0 = k / 10 * Math.PI * 2, a1 = (k + 1) / 10 * Math.PI * 2, rr = 2.6 + Math.sin(k * 1.9) * 0.6; g.tri([0, 0.35, 0], [Math.cos(a1) * rr, 0.35, Math.sin(a1) * rr], [Math.cos(a0) * rr, 0.35, Math.sin(a0) * rr], hexc(0xff6a1a, 1)); } g.sphere(0.5, 5, 3, hexc(0xffd23a, 1), 0.6, 0.4, 0.3, 0.4); }
+        else { g.cyl(0.3, 3.2, 5, hexc(0x1d1616), 'y', 0, 1.6, 0, hexc(0x1d1616), 0.12); g.push(M4.trs(0, 2.4, 0, 0, 0, 0.8)); g.cyl(0.1, 1.6, 4, hexc(0x1d1616), 'y', 0, 0.8, 0); g.pop(); g.push(M4.trs(0, 1.8, 0, 2, 0, -0.9)); g.cyl(0.1, 1.3, 4, hexc(0x1d1616), 'y', 0, 0.65, 0); g.pop(); }
+      } else if (T.props === 'candy') {
+        const q = r(), cc = [0xff5aa8, 0x5fd0ff, 0xffe14a, 0x8cff7a, 0xc25cff, 0xff8a1c][r() * 6 | 0];
+        if (q < 0.45) { g.cyl(0.14, 4.5, 5, hexc(0xffffff), 'y', 0, 2.25, 0); g.cyl(1.7, 0.4, 14, hexc(cc, 0.15), 'z', 0, 5.4, 0, hexc(cc, 0.15)); g.cyl(1.0, 0.44, 12, hexc(0xffffff, 0.15), 'z', 0, 5.4, 0); g.cyl(0.45, 0.48, 10, hexc(cc, 0.15), 'z', 0, 5.4, 0); }
+        else if (q < 0.75) { g.sphere(1.6 + r(), 9, 6, hexc(cc, 0.1), 0, 0.2, 0, 0.9); }
+        else { for (let k = 0; k < 6; k++) g.cyl(0.3, 0.75, 7, hexc(k % 2 ? 0xff3b3b : 0xffffff), 'y', 0, 0.37 + k * 0.75, 0); g.push(M4.trs(0, 4.5, 0.45, 0, Math.PI / 2, 0)); g.cyl(0.3, 0.9, 7, hexc(0xff3b3b), 'y', 0, 0, 0); g.pop(); }
       } else if (T.props === 'palms') {
         const q = r();
         if (q < 0.62) { const tc = hexc(0xa8804a); for (let k = 0; k < 5; k++) g.cyl(0.32 - k * 0.03, 1.3, 6, tc, 'y', k * 0.22, 0.65 + k * 1.25, 0); const lc = mixc(hexc(0x2f9e4a), hexc(0x5fcf5a), r());

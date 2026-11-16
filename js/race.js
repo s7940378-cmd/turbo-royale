@@ -34,6 +34,7 @@ class Race {
     let tod = TH.neon ? 'day' : ['day', 'day', 'day', 'day', 'sunset', 'sunset', 'night', 'rain', 'day', 'sunset'][sd];
     if (tod === 'rain' && this.def.theme === 'snow') tod = 'snow'; if (tod === 'rain' && this.def.theme === 'desert') tod = 'sunset';
     if (this.def.theme === 'snow' && tod === 'day' && sd < 2) tod = 'snow';
+    if (this.def.theme === 'volcano' && tod === 'rain') tod = 'night';
     this.tod = tod;
     const L = this.scene.light = { dir: TH.light.dir.slice(), sky: TH.light.sky.slice(), ground: TH.light.ground.slice(), sun: TH.light.sun.slice() };
     let skyTint = [1, 1, 1], fogC = TH.fog.slice();
@@ -68,7 +69,7 @@ class Race {
   _coins() {
     const t = this.track, g = new Geo(); g.cyl(0.6, 0.14, 14, hexc(0xffc928, 0.45), 'z', 0, 0, 0, hexc(0xffe98a, 0.6)); g.box(0.16, 0.6, 0.18, hexc(0xb57a00, 0.2), 0, 0, 0);
     this.coinGeo = this.R.upload(g);
-    this.coins = (t.coinSpots || []).filter((c, k) => this.quality !== 'low' || k % 5 !== 4).map(c => { const P = c.seg || t, p = P.point(c.i, c.lat); const m = this.R.mesh(this.coinGeo); this.scene.meshes.push(m); return { x: p[0], y: p[1] + 1.1, z: p[2], on: true, t: 0, m, ph: c.i * 0.35 }; });
+    this.coins = (t.coinSpots || []).filter((c, k) => this.quality !== 'low' || k % 5 !== 4).map(c => { const P = c.seg || t, p = P.point(c.i, c.lat); const m = this.R.mesh(this.coinGeo, { cull: 170 }); this.scene.meshes.push(m); return { x: p[0], y: p[1] + 1.1, z: p[2], on: true, t: 0, m, ph: c.i * 0.35 }; });
   }
   _grid() {
     const t = this.track, order = this.racers.slice();
@@ -86,7 +87,7 @@ class Race {
     for (const fr of BOX_ROWS) {
       const i = Math.floor(fr * t.N);
       for (const lat of [-7.5, -2.5, 2.5, 7.5]) {
-        const p = t.point(i, lat); const m = this.R.mesh(this.props.box, { tex: this.tex.box, alpha: 0.9, emis: 0.25 });
+        const p = t.point(i, lat); const m = this.R.mesh(this.props.box, { tex: this.tex.box, alpha: 0.9, emis: 0.25, cull: 230 });
         this.scene.meshes.push(m); this.boxes.push({ x: p[0], y: p[1] + 1.3, z: p[2], on: true, t: 0, m, ph: Math.random() * 6 });
       }
     }
@@ -115,8 +116,8 @@ class Race {
     // rolling hazards
     const rg = new Geo(), th = t.def.theme;
     if (th === 'meadow') { rg.cyl(1.4, 2.4, 12, hexc(0xe8c04a), 'x', 0, 0, 0, hexc(0xc89a3a)); rg.cyl(1.42, 0.15, 12, hexc(0xa0702a), 'x', 0.6, 0, 0); rg.cyl(1.42, 0.15, 12, hexc(0xa0702a), 'x', -0.6, 0, 0); }
-    else if (th === 'desert') { rg.sphere(1.6, 8, 6, hexc(0xa8744a), 0, 0, 0); rg.sphere(0.8, 6, 4, hexc(0x8a5f36), 0.9, 0.6, 0.4); }
-    else if (th === 'beach') { rg.sphere(1.6, 10, 7, hexc(0xffffff), 0, 0, 0); rg.cyl(1.62, 0.7, 12, hexc(0xff5a5a), 'x', 0, 0, 0); rg.cyl(1.63, 0.25, 12, hexc(0x2a7fff), 'y', 0, 0, 0); }
+    else if (th === 'desert' || th === 'volcano') { rg.sphere(1.6, 8, 6, hexc(0xa8744a), 0, 0, 0); rg.sphere(0.8, 6, 4, hexc(0x8a5f36), 0.9, 0.6, 0.4); }
+    else if (th === 'beach' || th === 'candy') { rg.sphere(1.6, 10, 7, hexc(0xffffff), 0, 0, 0); rg.cyl(1.62, 0.7, 12, hexc(0xff5a5a), 'x', 0, 0, 0); rg.cyl(1.63, 0.25, 12, hexc(0x2a7fff), 'y', 0, 0, 0); }
     else if (th === 'snow') { rg.sphere(1.7, 10, 7, hexc(0xf4f8ff, 0.1), 0, 0, 0); }
     else { rg.box(2.4, 0.6, 2.4, hexc(0x2a2350), 0, 0, 0); rg.cyl(1.5, 0.15, 14, hexc(0xff2bd6, 1), 'y', 0, -0.2, 0); rg.sphere(0.4, 6, 4, hexc(0xff3030, 1), 0, 0.4, 1.0); }
     const rgeo = R.upload(rg);
@@ -172,6 +173,7 @@ class Race {
   update(dt) {
     dt = Math.min(dt, 0.05);
     this.t += dt;
+    if (this.podium) { this._podiumUpdate(dt); return; }
     const ctl = Input.read();
     if (this.app.settings.autoGas && !ctl.brake) ctl.gas = 1;
     if (this.state === 'intro') { this.introT -= dt; if (this.introT <= 0 || ctl.gas && this.t > 0.6) { this.state = 'count'; } }
@@ -416,7 +418,7 @@ class Race {
     if (Math.hypot(tx - r.x, tz - r.z) > 25) { r.x = tx; r.z = tz; } else { r.x = lerp(r.x, tx, k); r.z = lerp(r.z, tz, k); }
     r.yaw = r.yaw + angDiff(r.yaw, n.yaw) * k; r.f = n.f; r.vx = n.vx; r.vz = n.vz;
     this._locate(r); const S = r.seg || this.track, si = r.seg ? r.sIdx : r.idx;
-    { const gy = Math.max(S.heightAt(si, r.x, r.z), this.track.groundHeight(r.x, r.z) + 0.03); r.y = gy > r.y ? gy : lerp(r.y, gy, 0.6); } r.visAir = n.ay || 0; r.trickT = n.tk ? 0.2 : 0;
+    { const gnd = this.track.groundHeight(r.x, r.z) + 0.03; const gy = typeof n.y === 'number' && isFinite(n.y) ? Math.max(n.y, gnd) : Math.max(S.heightAt(si, r.x, r.z), gnd); r.y = gy > r.y ? gy : lerp(r.y, gy, 0.6); } r.visAir = n.ay || 0; r.trickT = n.tk ? 0.2 : 0;
     r.pitch = lerp(r.pitch, -Math.atan(S.ty[si] * Math.cos(r.yaw - S.heading(si))), 0.2);
     r.drift = !!n.dr; r.driftDir = n.dd || 0; r.spin = n.sp ? 0.1 : 0; r.torp = n.tp ? 0.1 : 0; if (n.sp) { r.spinAng = (r.spinAng || 0) + dt * 10; } else if (r.spinAng) { r.spinAng = 0; } r.shield = n.sh ? 1 : 0; r.boost = n.b ? 0.1 : 0; r.charge = n.ch || 0;
     r.lap = n.lap; r.prog = n.prog; r.steer = n.st || 0;
@@ -748,7 +750,7 @@ class Race {
     this.order = rs;
   }
   _checkEnd(dt) {
-    if (this.resultsShown) return;
+    if (this.resultsShown || this.podium) return;
     if (this.mode === 'ko') { if (this.state === 'end' || (this.me && this.me.elim)) { this.finishWait += dt; if (this.finishWait > 4) this._results(); } return; }
     if (this.state !== 'end') return;
     this.finishWait += dt;
@@ -756,11 +758,46 @@ class Race {
     if ((humansDone && this.finishWait > 5) || this.finishWait > 25) this._results();
   }
   _results() {
-    this.resultsShown = true;
+    if (this.resultsShown || this.podium) return;
     // estimate unfinished
     const rows = this.order.map(r => ({ id: r.id, name: r.name, human: r.human, local: r.local, place: r.place, time: r.finished ? r.ftime : null, elim: r.elim, cos: r.cos }));
     const me = rows.find(r => r.local);
-    this.app.onRaceEnd({ mode: this.mode, track: this.def.id, rows, place: me ? me.place : 8, time: this.me && this.me.finished ? this.me.ftime : null, stats: this.stats, party: this.racers.filter(r => r.human).length > 1 });
+    const res = { mode: this.mode, track: this.def.id, rows, place: me ? me.place : 8, time: this.me && this.me.finished ? this.me.ftime : null, stats: this.stats, party: this.racers.filter(r => r.human).length > 1 };
+    if (this.mode === 'tt' || this.racers.length < 3) { this.resultsShown = true; this.app.onRaceEnd(res); return; }
+    // podium celebration for the top 3
+    const t = this.track, i0 = 16, yaw = t.heading(i0), c = t.point(i0, 0), H = [2.6, 1.8, 1.1], X = [0, -4.6, 4.6], C = [0xffc928, 0xcfd8e0, 0xd98a4a];
+    const g = new Geo(); g.push(M4.trs(c[0], c[1], c[2], yaw, 0, 0));
+    for (let k = 0; k < 3; k++) { g.box(4.3, H[k], 4.8, hexc(C[k], 0.18), X[k], H[k] / 2, 0); g.box(4.5, 0.2, 5, hexc(0xffffff, 0.3), X[k], H[k] - 0.1, 0); for (let q = 0; q <= k; q++) g.box(0.3, 0.9, 0.12, hexc(0x1a1033, 0), X[k] + (q - k / 2) * 0.55, H[k] / 2, 2.46); }
+    g.box(15, 0.15, 7, hexc(0xe8333a, 0.1), 0, 0.08, 0); g.pop();
+    const m = this.R.mesh(this.R.upload(g)); this.scene.meshes.push(m);
+    this.podium = { t: 0, res, m, list: this.order.slice(0, 3), c, yaw, H, X };
+    this.h.root.classList.add('podium'); Sfx.engine(false); Sfx.play('finish');
+    const L = this.podium.list; this.msg('🏆 ' + L[0].name, `2nd ${L[1].name}  ·  3rd ${L[2].name}`, 0);
+    for (const p of this.proj) if (p.m) p.m.visible = false; this.proj = [];
+  }
+  _podiumUpdate(dt) {
+    const p = this.podium, c = this.cam; p.t += dt;
+    const cy = Math.cos(p.yaw), sy = Math.sin(p.yaw);
+    for (const r of this.racers) {
+      const k = p.list.indexOf(r);
+      if (k < 0) { r.view.update(r.x, r.y, r.z, r.yaw, 0, 0, 0, 0, dt, { alpha: 0 }); continue; }
+      const ph = p.t * (5.2 - k * 0.7) + k * 1.3, hop = Math.abs(Math.sin(ph)) * (1.4 - k * 0.35);
+      r.x = p.c[0] + p.X[k] * cy; r.z = p.c[2] - p.X[k] * sy; r.y = p.c[1] + p.H[k]; r.elim = false;
+      const yaw = p.yaw + Math.sin(p.t * 1.6 + k * 2) * 0.55 + (k === 0 && p.t > 2.2 && p.t < 3.2 ? (p.t - 2.2) * Math.PI * 2 : 0);
+      r.view.update(r.x, r.y, r.z, yaw, 0, Math.sin(ph * 0.5) * 0.08, Math.sin(p.t * 3 + k), 6, dt, { hop, sq: hop < 0.2 ? -0.16 : 0.06, alpha: 1 });
+      if (Math.random() < 0.5) this.fxAdd.emit(r.x + (Math.random() - 0.5) * 2, r.y + 0.4, r.z + (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 3, 5 + Math.random() * 4, (Math.random() - 0.5) * 3, k === 0 ? [1, 0.85, 0.3, 1] : [0.8, 0.9, 1, 1], 0.5, 0.7, 0, 9);
+    }
+    for (let q = 0; q < 4; q++) this.fxN.emit(p.c[0] + (Math.random() - 0.5) * 18, p.c[1] + 9 + Math.random() * 3, p.c[2] + (Math.random() - 0.5) * 18, (Math.random() - 0.5) * 3, -2 - Math.random() * 2, (Math.random() - 0.5) * 3, [Math.random(), Math.random(), Math.random(), 1], 0.55, 3.5, 0, 1.5);
+    this.fxAdd.update(dt); this.fxN.update(dt);
+    const sw = Math.sin(p.t * 0.5) * 4, d = 15 - Math.min(p.t, 3) * 1.2, kk = p.t < 0.1 ? 1 : 1 - Math.exp(-3 * dt);
+    const tx = p.c[0] + sy * d - cy * sw, tz = p.c[2] + cy * d + sy * sw;
+    c.x = lerp(c.x, tx, kk); c.z = lerp(c.z, tz, kk); c.y = lerp(c.y, p.c[1] + 3.6, kk); c.tx = p.c[0]; c.ty = p.c[1] + 2.4; c.tz = p.c[2]; c.fov = 0.95;
+    M4.trs(c.x, 0, c.z, 0, 0, 0, 1, this.track.skyMesh.m);
+    const ctl = Input.read();
+    if (p.t > 7 || (p.t > 1.5 && (ctl.gas || ctl.item))) {
+      this.podium = null; this.resultsShown = true; this.h.root.classList.remove('podium'); this.msg('', '');
+      p.m.visible = false; this.R.free(p.m.g); this.app.onRaceEnd(p.res);
+    }
   }
   // ---------- visuals ----------
   _boxesUpdate(dt) {
@@ -823,7 +860,8 @@ class Race {
       r.leanV = lerp(r.leanV || 0, -r.steer * 0.07 * clamp(r.f / 28, 0, 1), 1 - Math.exp(-8 * dt));
       const jit = (this.state === 'count' || this.state === 'intro') ? Math.sin(this.t * 55 + r.phase * 9) * 0.012 : Math.abs(r.f) > 5 ? Math.sin(this.t * 31 + r.phase * 5) * 0.008 : 0;
       const trickRoll = r.trickT > 0 ? (1 - r.trickT / 0.45) * Math.PI * 2 * (r.driftDir < 0 ? -1 : 1) : 0;
-      r.view.update(r.x, r.y + (r.visAir || 0), r.z, vy, r.pitch, r.roll + trickRoll, r.steer, r.f, dt, { hop: r.hop * 0.6, shield: r.shield > 0, alpha: a, flash, torp: r.torp > 0, sq: r.sq, stz: r.stz, lean: r.leanV, jit });
+      const drawY = Math.max(r.y, this.track.groundHeight(r.x, r.z) + 0.03);
+      r.view.update(r.x, drawY + (r.visAir || 0), r.z, vy, r.pitch, r.roll + trickRoll, r.steer, r.f, dt, { hop: r.hop * 0.6, shield: r.shield > 0, alpha: a, flash, torp: r.torp > 0, sq: r.sq, stz: r.stz, lean: r.leanV, jit });
       if (r.remote || r.bot) this._trailsRemoteOnly(r, dt);
     }
   }
@@ -860,8 +898,7 @@ class Race {
     const r = this.me, h = this.h; if (!r) return;
     const n = this.racers.filter(o => !o.elim).length;
     const pl = r.elim ? (this.myKoPlace || r.place) : r.place;
-    h.pos.innerHTML = `${pl}<sup>${ORD(pl).slice(-2)}</sup>`;
-    h.pos.className = 'pos p' + Math.min(pl, 4);
+    if (this._hp !== pl) { this._hp = pl; h.pos.innerHTML = `${pl}<sup>${ORD(pl).slice(-2)}</sup>`; h.pos.className = 'pos p' + Math.min(pl, 4); }
     h.lap.textContent = `${clamp(r.lap, 1, this.laps)}/${this.laps}`;
     h.time.textContent = fmtTime(r.finished ? r.ftime : this.raceTime);
     h.spd.textContent = Math.round(Math.abs(r.f) * 2);
@@ -871,10 +908,12 @@ class Race {
     h.boostBar.className = 'drift ' + (r.drift ? (r.charge >= 2.6 ? 'l3' : r.charge >= 1.6 ? 'l2' : r.charge >= 0.7 ? 'l1' : 'l0') : '');
     if (this.mode === 'ko') h.ko.innerHTML = `<b>${n}</b> LEFT · next knockout <b>${Math.max(0, Math.ceil(this.koNext))}s</b>`;
     // minimap
+    this._mf = (this._mf || 0) + 1; if (this._mf % 3 === 0) {
     const ctx = this.mapCtx, mm = this.track.minimap; ctx.clearRect(0, 0, 150, 150); ctx.drawImage(mm.img, 0, 0);
     for (const o of this.racers) { if (o.elim) continue; const p = mm.map(o.x, o.z); ctx.beginPath(); ctx.arc(p[0], p[1], o.local ? 5 : 3.5, 0, 7); ctx.fillStyle = o.local ? '#ffe14a' : o.human ? '#2bf0ff' : '#ff5a5a'; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = '#000'; ctx.stroke(); }
     for (const p of this.proj) { const q = mm.map(p.x, p.z); ctx.fillStyle = p.sk ? '#c25cff' : '#ff8a1c'; ctx.fillRect(q[0] - (p.sk ? 3 : 2), q[1] - (p.sk ? 3 : 2), p.sk ? 6 : 4, p.sk ? 6 : 4); }
     for (const g of this.gates) { const q = mm.map(g.x, g.z); ctx.fillStyle = g.open > 0 ? '#5fe06f' : '#ff4040'; ctx.fillRect(q[0] - 3, q[1] - 3, 6, 6); }
+    }
     // name tags
     for (const o of this.racers) {
       if (!o.tag) continue;
@@ -895,7 +934,7 @@ class Race {
     for (const m of this.scene.meshes) { /* geometry for karts is cached/shared; free track meshes */ }
     for (const m of this.track.meshes) this.R.free(m.g);
     Sfx.engine(false); this.R.free(this.coinGeo); { const sf = document.getElementById('speedfx'); if (sf) sf.style.opacity = 0; }
-    this.h.root.classList.add('hidden');
+    this.h.root.classList.add('hidden'); this.h.root.classList.remove('podium');
   }
 }
 function fmtTime(t) { if (t == null) return '--:--.--'; const m = Math.floor(t / 60), s = t - m * 60; return `${m}:${s < 10 ? '0' : ''}${s.toFixed(2)}`; }

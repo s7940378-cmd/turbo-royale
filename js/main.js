@@ -47,6 +47,8 @@ const App = window.App = {
     this._rt = (this._rt || 0) + raw; if (this._rt < 1.5) return; this._rt = 0;
     const max = this.settings.quality === 'low' ? 1 : Math.min(window.devicePixelRatio || 1, 1.5), min = 0.55;
     const R = this.R; if (R.pixelRatio > max) R.pixelRatio = max;
+    R.lowQ = this.settings.quality === 'low' || !!this._autoLow;
+    if (this._ft > 1 / 30 && R.pixelRatio <= min + 0.01) this._autoLow = true; // still slow at the lowest resolution: use the cheaper shader
     if (this._ft > 1 / 45 && R.pixelRatio > min) R.pixelRatio = Math.max(min, R.pixelRatio - 0.1);
     else if (this._ft < 1 / 58 && R.pixelRatio < max) R.pixelRatio = Math.min(max, R.pixelRatio + 0.05);
   },
@@ -273,7 +275,7 @@ const App = window.App = {
   modeModal() {
     const inParty = Net.party && Net.members().length > 1;
     const b = this.modal(`<h3>Choose mode</h3><div class="opts" id="mOpts">${Object.values(MODES).map(m => `<button class="opt ${this.sel.mode === m.id ? 'on' : ''}" data-m="${m.id}" ${inParty && m.id === 'tt' ? 'disabled' : ''}><b>${m.icon} ${m.name}</b><span class="muted">${m.desc}${inParty && m.id === 'tt' ? ' (solo only)' : ''}</span></button>`).join('')}</div>
-      <h3 style="margin-top:18px">Choose track</h3><div class="opts" id="tOpts">${TRACKS.map(t => `<button class="opt ${this.sel.track === t.id ? 'on' : ''}" data-t="${t.id}"><div class="tm" style="background-image:url(${this.trackThumb(t.id)})"></div><b>${t.name}</b><span class="muted">${{ beach: 'Sunny seaside', meadow: 'Grassy hills', desert: 'Sand & canyons', snow: 'Icy mountain pass', neon: 'Night city' }[t.theme]}${Account.profile.best[t.id] ? ' · best ' + fmtTime(Account.profile.best[t.id]) : ''}</span></button>`).join('')}</div>
+      <h3 style="margin-top:18px">Choose track</h3><div class="opts" id="tOpts">${TRACKS.map(t => `<button class="opt ${this.sel.track === t.id ? 'on' : ''}" data-t="${t.id}"><div class="tm" style="background-image:url(${this.trackThumb(t.id)})"></div><b>${t.name}</b><span class="muted">${{ beach: 'Sunny seaside', volcano: 'Lava and ash', candy: 'Sweet and colourful', meadow: 'Grassy hills', desert: 'Sand & canyons', snow: 'Icy mountain pass', neon: 'Night city' }[t.theme]}${Account.profile.best[t.id] ? ' · best ' + fmtTime(Account.profile.best[t.id]) : ''}</span></button>`).join('')}</div>
       <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn y" id="mOk">Confirm</button></div>`, true);
     b.querySelectorAll('[data-m]').forEach(x => x.onclick = () => { this.sel.mode = x.dataset.m; b.querySelectorAll('[data-m]').forEach(y => y.classList.toggle('on', y === x)); });
     b.querySelectorAll('[data-t]').forEach(x => x.onclick = () => { this.sel.track = x.dataset.t; b.querySelectorAll('[data-t]').forEach(y => y.classList.toggle('on', y === x)); });
@@ -286,7 +288,7 @@ const App = window.App = {
     const s = this.sel; let mode = s.mode; if (multi && mode === 'tt') mode = 'gp';
     const seed = (Math.random() * 1e9) | 0; const r = rng(seed);
     const humans = multi ? Net.members().slice(0, 8).map(m => ({ id: m.peer, tag: m.sameTab ? Account.profile.tag : safeTag(m.presence.tag), cos: m.sameTab ? packCos(Account.profile.equip) : m.presence.cos })) : [{ id: 'me', tag: Account.profile.tag, cos: packCos(Account.profile.equip) }];
-    const nb = mode === 'tt' ? 0 : Math.max(0, ((multi && Net.room) ? 8 : 12) - humans.length);
+    const nb = mode === 'tt' ? 0 : Math.max(0, ((multi && Net.room) || this.settings.quality === 'low' ? 8 : 12) - humans.length);
     const names = BOT_NAMES.slice().sort(() => r() - 0.5);
     const bots = [];
     for (let i = 0; i < nb; i++) {
@@ -580,8 +582,8 @@ const App = window.App = {
   shopToday() {
     const r = rng(hashStr('shop-' + todayKey()));
     const pool = CATALOG.filter(i => !i.def && !i.pass).map(i => ({ i, k: r() })).sort((a, b) => a.k - b.k).map(o => o.i);
-    const feat = pool.filter(i => i.rarity === 'legendary' || i.rarity === 'epic').slice(0, 2);
-    const daily = pool.filter(i => !feat.includes(i)).slice(0, 8);
+    const feat = pool.filter(i => i.rarity === 'legendary' || i.rarity === 'epic').slice(0, 3);
+    const daily = pool.filter(i => !feat.includes(i)).slice(0, 12);
     return { feat, daily };
   },
   renderShop() {

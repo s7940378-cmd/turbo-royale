@@ -103,6 +103,28 @@ const KartFactory = (() => {
       g.sphere(0.2, 8, 6, hexc(0xffd23a), 0.45, 1.05, 0.75); g.box(0.12, 0.06, 0.12, hexc(0xff8a1c), 0.45, 1.06, 0.95);
       drvZ = -0.2;
     }
+    if (body === 'bike' || body === 'chopper' || body === 'scooter') {
+      const chop = body === 'chopper', sc = body === 'scooter', fz0 = chop ? 1.55 : sc ? 0.85 : 1.05, rz0 = sc ? -0.75 : -0.95, wy = sc ? 0.3 : 0.42;
+      if (sc) { g.box(0.5, 0.12, 1.2, P.a, 0, 0.42, 0); g.box(0.45, 0.9, 0.2, P.a, 0, 0.9, 0.65); g.box(0.5, 0.35, 0.7, P.pat === 'two' ? P.b : P.a, 0, 0.75, -0.55); g.box(0.45, 0.12, 0.6, SEAT, 0, 0.98, -0.5); stripe(0.47, 0.5, 0.05, 0, 0.9, 0.76); }
+      else { g.box(0.36, 0.4, 1.7, DARK, 0, 0.62, 0); g.box(0.5, 0.42, 0.8, P.a, 0, 0.98, 0.25); // tank
+        g.box(0.44, 0.16, 0.8, SEAT, 0, 0.95, -0.5); g.wedge(0.5, 0.45, 0.6, P.pat === 'two' ? P.b : P.a, 0, 0.75, -1.0, 0.2);
+        if (!chop) { g.push(M4.trs(0, 0.75, 0.95, Math.PI, 0, 0)); g.wedge(0.56, 0.75, 0.6, P.a, 0, 0, 0, 0.25); g.pop(); g.box(0.4, 0.3, 0.05, hexc(0x8fd8ff, 0.3), 0, 1.5, 0.85); stripe(0.14, 0.05, 0.8, 0, 1.2, 0.25); }
+        else { g.push(M4.trs(0, 0.9, 1.05, 0, -0.6, 0)); g.cyl(0.07, 1.5, 5, hexc(0xdfe6ee, 0.3), 'y', -0.16, 0, 0); g.cyl(0.07, 1.5, 5, hexc(0xdfe6ee, 0.3), 'y', 0.16, 0, 0); g.pop(); g.box(0.5, 0.25, 0.5, hexc(0xdfe6ee, 0.3), 0, 0.5, 0.1); stripe(0.52, 0.1, 0.5, 0, 1.1, 0.25); }
+        for (const sx of [-1, 1]) g.cyl(0.08, 1.1, 6, hexc(0xc0c4c8, 0.2), 'z', sx * 0.26, 0.5, -0.75); }
+      g.cyl(0.04, 1.1, 5, BLACK, 'x', 0, chop ? 1.75 : 1.35, sc ? 0.62 : chop ? 0.55 : 0.62); g.sphere(0.13, 6, 4, hexc(0xfff6c0, 0.9), 0, sc ? 1.2 : 1.05, fz0 - (chop ? 0.5 : 0.1));
+      wheelPos = [[0, wy, fz0], [0, wy, rz0]]; drvZ = sc ? -0.45 : -0.4;
+    } else if (body === 'atv') {
+      g.box(1.0, 0.45, 2.1, P.a, 0, 0.8, 0); g.box(0.7, 0.3, 0.7, P.pat === 'two' ? P.b : P.a, 0, 1.1, 0.45); g.box(0.6, 0.16, 0.8, SEAT, 0, 1.08, -0.45);
+      for (const sx of [-1, 1]) for (const zz of [0.9, -0.9]) g.box(0.55, 0.12, 0.9, P.pat === 'two' ? P.b : P.a, sx * 0.85, 1.02, zz);
+      g.cyl(0.04, 1.2, 5, BLACK, 'x', 0, 1.45, 0.6); g.box(1.1, 0.2, 0.2, GREY, 0, 0.7, 1.15); g.box(0.9, 0.08, 0.5, DARK, 0, 1.1, -1.0); stripe(0.3, 0.05, 2.0, 0, 1.04, 0);
+      g.sphere(0.13, 6, 4, hexc(0xfff6c0, 0.9), -0.3, 0.95, 1.08); g.sphere(0.13, 6, 4, hexc(0xfff6c0, 0.9), 0.3, 0.95, 1.08);
+      wheelPos = [[-0.92, 0.5, 0.9], [0.92, 0.5, 0.9], [-0.92, 0.5, -0.9], [0.92, 0.5, -0.9]]; drvZ = -0.35;
+    } else if (body === 'ufo') {
+      g.cyl(1.7, 0.3, 16, P.a, 'y', 0, 0.55, 0, P.a, 1.1); g.cyl(1.1, 0.25, 16, P.pat === 'two' ? P.b : P.a, 'y', 0, 0.3, 0, DARK, 1.7);
+      for (let k = 0; k < 8; k++) { const an = k / 8 * Math.PI * 2; g.sphere(0.14, 5, 4, hexc(k % 2 ? 0x2bf0ff : 0xffe14a, 1), Math.cos(an) * 1.45, 0.5, Math.sin(an) * 1.45); }
+      g.cyl(0.5, 0.1, 10, hexc(0x8cff00, 1), 'y', 0, 0.14, 0); g.box(0.7, 0.4, 0.4, SEAT, 0, 0.85, -0.55); stripe(0.25, 0.05, 1.6, 0, 0.72, 0.6);
+      wheelPos = []; drvZ = -0.1;
+    }
     if (body === 'formula') {
       g.box(0.7, 0.3, 3.0, P.a, 0, 0.4, 0.1); // monocoque
       g.wedge(0.55, 0.28, 1.2, P.a, 0, 0.35, 1.9, 0.08); // nose
@@ -188,7 +210,7 @@ const KartFactory = (() => {
       if (wk === 'candy') wg.box(ww + 0.06, wr * 1.1, 0.1, hexc(0xffffff, 0.3), 0, 0, 0);
       else wg.box(ww + 0.06, wr * 1.1, 0.08, wk === 'neon' ? hexc(0xff2bd6, 1) : shade(rim, 0.6), 0, 0, 0);
     }
-    const out = { body: R.upload(g), wheel: wheelPos.length ? R.upload(wg) : null, wheelPos, wr, hover: body === 'hover', drvH: 1.9 };
+    const out = { body: R.upload(g), wheel: wheelPos.length ? R.upload(wg) : null, wheelPos, wr, hover: body === 'hover' || body === 'ufo', bike: wheelPos.length === 2, drvH: 1.9 };
     cache.set(key, out);
     return out;
   }
@@ -238,22 +260,22 @@ class KartView {
     this.shadow = this.R.mesh(props.blob, { alpha: 0.35, tint: [0, 0, 0] });
     this.shieldM = this.R.mesh(props.shield, { alpha: 0.28, visible: false, twoSided: true, blend: 'add' });
     this.torpM = this.R.mesh(props.torpedo, { visible: false });
-    this.meshes = [this.shadow, this.bodyM, ...this.wheels, this.shieldM, this.torpM];
+    this.meshes = [this.shadow, this.bodyM, ...this.wheels, this.shieldM, this.torpM]; this.meshes.forEach(m => m.cull = 240); this._tmp = new Float32Array(16); this._bw = [this.bodyM, ...this.wheels];
     this.spin = 0;
   }
   update(x, y, z, yaw, pitch, roll, steer, speed, dt, opts) {
     opts = opts || {};
     const bob = this.k.hover ? 0.35 + Math.sin(performance.now() / 180) * 0.06 : 0;
     const hop = opts.hop || 0;
-    M4.trs(x, y + bob + hop + (opts.jit || 0), z, yaw, pitch, roll + (opts.lean || 0), 1, this.bodyM.m);
+    M4.trs(x, y + bob + hop + (opts.jit || 0), z, yaw, pitch, roll + (opts.lean || 0) * (this.k.bike ? 3.2 : 1), 1, this.bodyM.m);
     if (opts.sq || opts.stz) { // squash & stretch about the ground
       const m = this.bodyM.m, sq = opts.sq || 0, stz = opts.stz || 0, sy = 1 + sq - stz * 0.25, sx = 1 - sq * 0.5, sz = 1 - sq * 0.5 + stz;
       m[0] *= sx; m[1] *= sx; m[2] *= sx; m[4] *= sy; m[5] *= sy; m[6] *= sy; m[8] *= sz; m[9] *= sz; m[10] *= sz;
     }
     this.spin += speed * dt / this.k.wr;
-    const tmp = new Float32Array(16);
+    const tmp = this._tmp;
     this.k.wheelPos.forEach((wp, i) => {
-      const st = i < 2 ? -steer * 0.5 : 0; // steering right lowers yaw, so wheels turn by -steer
+      const st = (this.k.bike ? i === 0 : i < 2) ? -steer * 0.5 : 0; // steering right lowers yaw, so wheels turn by -steer
       M4.trs(wp[0], wp[1], wp[2], st, this.spin, 0, 1, tmp);
       M4.mul(this.bodyM.m, tmp, this.wheels[i].m);
     });
@@ -261,7 +283,7 @@ class KartView {
     this.shieldM.visible = !!opts.shield;
     if (opts.shield) M4.trs(x, y + 0.9, z, performance.now() / 400, 0, 0, 1, this.shieldM.m);
     const a = opts.alpha === undefined ? 1 : opts.alpha;
-    for (const m of [this.bodyM, ...this.wheels]) { m.alpha = a; m.visible = a > 0.01 && !opts.torp; m.emis = opts.flash ? 0.6 : 0; }
+    for (const m of this._bw) { m.alpha = a; m.visible = a > 0.01 && !opts.torp; m.emis = opts.flash ? 0.6 : 0; }
     this.torpM.visible = !!opts.torp && a > 0.01; if (opts.torp) M4.trs(x, y + 0.2 + Math.sin(performance.now() / 90) * 0.08, z, yaw, pitch, performance.now() / 160, 1, this.torpM.m);
     this.shadow.visible = a > 0.01;
   }

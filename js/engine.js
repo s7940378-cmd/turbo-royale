@@ -152,21 +152,20 @@ class Renderer {
       || canvas.getContext('experimental-webgl');
     if (!gl) throw new Error('WebGL not available');
     this.gl = gl;
-    this.prog = this._prog(`attribute vec3 aP;attribute vec3 aN;attribute vec4 aC;attribute vec2 aU;
+    const VS = `attribute vec3 aP;attribute vec3 aN;attribute vec4 aC;attribute vec2 aU;
 uniform mat4 uP,uV,uM;varying vec3 vN;varying vec4 vC;varying vec2 vU;varying float vD;varying vec3 vW;
-void main(){vec4 w=uM*vec4(aP,1.);vW=w.xyz;vec4 v=uV*w;gl_Position=uP*v;vN=(uM*vec4(aN,0.)).xyz;vC=aC;vU=aU;vD=-v.z;}`,
-      `precision mediump float;varying vec3 vN;varying vec4 vC;varying vec2 vU;varying float vD;varying vec3 vW;
+void main(){vec4 w=uM*vec4(aP,1.);vW=w.xyz;vec4 v=uV*w;gl_Position=uP*v;vN=(uM*vec4(aN,0.)).xyz;vC=aC;vU=aU;vD=-v.z;}`, FS = `precision mediump float;varying vec3 vN;varying vec4 vC;varying vec2 vU;varying float vD;varying vec3 vW;
 uniform vec3 uL,uSky,uGnd,uSun,uFog,uTint,uCam;uniform vec2 uFR;uniform float uFogOn,uUseT,uA,uE;uniform sampler2D uT;
 void main(){vec3 n=normalize(vN);vec4 b=vC;b.rgb*=uTint;float al=uA;if(uUseT>.5){vec4 t=texture2D(uT,vU);b.rgb*=t.rgb;al*=t.a;}
 if(al<.02)discard;float h=n.y*.5+.5;vec3 amb=mix(uGnd,uSky,h);float d=max(dot(n,uL),0.);vec3 lit=b.rgb*(amb+uSun*d);vec3 vv=normalize(uCam-vW);float up=1.-n.y*n.y;float rim=pow(1.-max(dot(n,vv),0.),3.)*up;float sp=pow(max(dot(n,normalize(uL+vv)),0.),28.)*(.12+.3*up);lit+=uSky*rim*.28+uSun*sp;lit=mix(vec3(dot(lit,vec3(.299,.587,.114))),lit,1.14);
 float e=clamp(b.a+uE,0.,1.);vec3 col=mix(lit,b.rgb*1.15,e);float f=clamp((vD-uFR.x)/(uFR.y-uFR.x),0.,1.)*uFogOn;col=mix(col,uFog,f);
-gl_FragColor=vec4(col,al);}`);
+gl_FragColor=vec4(col,al);}`;
+    this.prog = this._prog(VS, FS); this.progLo = this._prog(VS, FS.replace(`vec3 vv=normalize(uCam-vW);float up=1.-n.y*n.y;float rim=pow(1.-max(dot(n,vv),0.),3.)*up;float sp=pow(max(dot(n,normalize(uL+vv)),0.),28.)*(.12+.3*up);lit+=uSky*rim*.28+uSun*sp;`, ''));
     this.pprog = this._prog(`attribute vec3 aP;attribute vec4 aC;attribute float aS;uniform mat4 uP,uV;uniform float uK;varying vec4 vC;
 void main(){vec4 v=uV*vec4(aP,1.);gl_Position=uP*v;gl_PointSize=min(aS*uK/max(-v.z,.5),128.);vC=aC;}`,
       `precision mediump float;varying vec4 vC;void main(){vec2 p=gl_PointCoord-.5;float d=length(p);if(d>.5)discard;gl_FragColor=vec4(vC.rgb,vC.a*(1.-d*2.));}`);
-    const g = gl, P = this.prog;
-    this.loc = {}; ['aP', 'aN', 'aC', 'aU'].forEach(a => this.loc[a] = g.getAttribLocation(P, a));
-    ['uCam', 'uP', 'uV', 'uM', 'uL', 'uSky', 'uGnd', 'uSun', 'uFog', 'uTint', 'uFR', 'uFogOn', 'uUseT', 'uA', 'uE', 'uT'].forEach(u => this.loc[u] = g.getUniformLocation(P, u));
+    const g = gl; const mkLoc = P => { const o = {}; ['aP', 'aN', 'aC', 'aU'].forEach(a => o[a] = g.getAttribLocation(P, a)); ['uCam', 'uP', 'uV', 'uM', 'uL', 'uSky', 'uGnd', 'uSun', 'uFog', 'uTint', 'uFR', 'uFogOn', 'uUseT', 'uA', 'uE', 'uT'].forEach(u => o[u] = g.getUniformLocation(P, u)); return o; };
+    this.locHi = mkLoc(this.prog); this.locLo = mkLoc(this.progLo); this.loc = this.locHi; this.curProg = this.prog; this.lowQ = false;
     this.ploc = {}; ['aP', 'aC', 'aS'].forEach(a => this.ploc[a] = g.getAttribLocation(this.pprog, a));
     ['uP', 'uV', 'uK'].forEach(u => this.ploc[u] = g.getUniformLocation(this.pprog, u));
     this.white = this.texture(null);
@@ -206,7 +205,7 @@ void main(){vec4 v=uV*vec4(aP,1.);gl_Position=uP*v;gl_PointSize=min(aS*uK/max(-v
   // upload raw interleaved arrays (for terrain)
   uploadRaw(data) { const gl = this.gl; const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW); return { buf: b, count: data.length / 12 }; }
   free(g) { if (g && g.buf) this.gl.deleteBuffer(g.buf); }
-  mesh(gpu, opts) { return Object.assign({ g: gpu, m: M4.ident(), visible: true, alpha: 1, tint: [1, 1, 1], emis: 0, tex: null, fog: true, twoSided: false, depthWrite: true }, opts || {}); }
+  mesh(gpu, opts) { return Object.assign({ cull: 0, g: gpu, m: M4.ident(), visible: true, alpha: 1, tint: [1, 1, 1], emis: 0, tex: null, fog: true, twoSided: false, depthWrite: true }, opts || {}); }
   resize() {
     if (this.fixed) return;
     const c = this.canvas; const w = Math.floor(c.clientWidth * this.pixelRatio), h = Math.floor(c.clientHeight * this.pixelRatio);
@@ -219,14 +218,18 @@ void main(){vec4 v=uV*vec4(aP,1.);gl_Position=uP*v;gl_PointSize=min(aS*uK/max(-v
     gl.clearColor(s[0], s[1], s[2], s[3] === undefined ? 1 : s[3]); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     M4.persp(cam.fov, W / Math.max(1, H), cam.near || 0.3, cam.far || 1200, this.proj);
     M4.lookAt(cam.x, cam.y, cam.z, cam.tx, cam.ty, cam.tz, this.view);
-    const L = this.loc; gl.useProgram(this.prog);
+    this.loc = this.lowQ ? this.locLo : this.locHi; this.curProg = this.lowQ ? this.progLo : this.prog;
+    const L = this.loc; gl.useProgram(this.curProg);
     gl.uniformMatrix4fv(L.uP, false, this.proj); gl.uniformMatrix4fv(L.uV, false, this.view); gl.uniform3f(L.uCam, cam.x, cam.y, cam.z);
     const l = scene.light; gl.uniform3fv(L.uL, l.dir); gl.uniform3fv(L.uSky, l.sky); gl.uniform3fv(L.uGnd, l.ground); gl.uniform3fv(L.uSun, l.sun);
     gl.uniform3fv(L.uFog, scene.fog.color); gl.uniform2f(L.uFR, scene.fog.near, scene.fog.far);
     gl.uniform1i(L.uT, 0); gl.activeTexture(gl.TEXTURE0);
     gl.enableVertexAttribArray(L.aP); gl.enableVertexAttribArray(L.aN); gl.enableVertexAttribArray(L.aC); gl.enableVertexAttribArray(L.aU);
     const opaque = [], trans = [];
-    for (const m of scene.meshes) { if (!m.visible || !m.g) continue; (m.alpha < 1 || m.blend ? trans : opaque).push(m); }
+    let cfx = cam.tx - cam.x, cfz = cam.tz - cam.z; const cl = Math.hypot(cfx, cfz) || 1; cfx /= cl; cfz /= cl;
+    for (const m of scene.meshes) { if (!m.visible || !m.g) continue;
+      if (m.cull) { const dx = m.m[12] - cam.x, dz = m.m[14] - cam.z; if (dx * dx + dz * dz > m.cull * m.cull || dx * cfx + dz * cfz < -8) continue; }
+      (m.alpha < 1 || m.blend ? trans : opaque).push(m); }
     gl.disable(gl.BLEND); gl.depthMask(true);
     for (const m of opaque) this._draw(m);
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
@@ -259,7 +262,7 @@ void main(){vec4 v=uV*vec4(aP,1.);gl_Position=uP*v;gl_PointSize=min(aS*uK/max(-v
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, ps.additive ? gl.ONE : gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
     gl.drawArrays(gl.POINTS, 0, ps.n);
     gl.depthMask(true); gl.disableVertexAttribArray(L.aS);
-    gl.useProgram(this.prog);
+    gl.useProgram(this.curProg);
   }
   // project world point to CSS pixels; returns null if behind camera
   project(x, y, z) {
