@@ -153,12 +153,12 @@ class Renderer {
     if (!gl) throw new Error('WebGL not available');
     this.gl = gl;
     this.prog = this._prog(`attribute vec3 aP;attribute vec3 aN;attribute vec4 aC;attribute vec2 aU;
-uniform mat4 uP,uV,uM;varying vec3 vN;varying vec4 vC;varying vec2 vU;varying float vD;
-void main(){vec4 w=uM*vec4(aP,1.);vec4 v=uV*w;gl_Position=uP*v;vN=(uM*vec4(aN,0.)).xyz;vC=aC;vU=aU;vD=-v.z;}`,
-      `precision mediump float;varying vec3 vN;varying vec4 vC;varying vec2 vU;varying float vD;
-uniform vec3 uL,uSky,uGnd,uSun,uFog,uTint;uniform vec2 uFR;uniform float uFogOn,uUseT,uA,uE;uniform sampler2D uT;
+uniform mat4 uP,uV,uM;varying vec3 vN;varying vec4 vC;varying vec2 vU;varying float vD;varying vec3 vW;
+void main(){vec4 w=uM*vec4(aP,1.);vW=w.xyz;vec4 v=uV*w;gl_Position=uP*v;vN=(uM*vec4(aN,0.)).xyz;vC=aC;vU=aU;vD=-v.z;}`,
+      `precision mediump float;varying vec3 vN;varying vec4 vC;varying vec2 vU;varying float vD;varying vec3 vW;
+uniform vec3 uL,uSky,uGnd,uSun,uFog,uTint,uCam;uniform vec2 uFR;uniform float uFogOn,uUseT,uA,uE;uniform sampler2D uT;
 void main(){vec3 n=normalize(vN);vec4 b=vC;b.rgb*=uTint;float al=uA;if(uUseT>.5){vec4 t=texture2D(uT,vU);b.rgb*=t.rgb;al*=t.a;}
-if(al<.02)discard;float h=n.y*.5+.5;vec3 amb=mix(uGnd,uSky,h);float d=max(dot(n,uL),0.);vec3 lit=b.rgb*(amb+uSun*d);
+if(al<.02)discard;float h=n.y*.5+.5;vec3 amb=mix(uGnd,uSky,h);float d=max(dot(n,uL),0.);vec3 lit=b.rgb*(amb+uSun*d);vec3 vv=normalize(uCam-vW);float up=1.-n.y*n.y;float rim=pow(1.-max(dot(n,vv),0.),3.)*up;float sp=pow(max(dot(n,normalize(uL+vv)),0.),28.)*(.12+.3*up);lit+=uSky*rim*.28+uSun*sp;lit=mix(vec3(dot(lit,vec3(.299,.587,.114))),lit,1.14);
 float e=clamp(b.a+uE,0.,1.);vec3 col=mix(lit,b.rgb*1.15,e);float f=clamp((vD-uFR.x)/(uFR.y-uFR.x),0.,1.)*uFogOn;col=mix(col,uFog,f);
 gl_FragColor=vec4(col,al);}`);
     this.pprog = this._prog(`attribute vec3 aP;attribute vec4 aC;attribute float aS;uniform mat4 uP,uV;uniform float uK;varying vec4 vC;
@@ -166,7 +166,7 @@ void main(){vec4 v=uV*vec4(aP,1.);gl_Position=uP*v;gl_PointSize=min(aS*uK/max(-v
       `precision mediump float;varying vec4 vC;void main(){vec2 p=gl_PointCoord-.5;float d=length(p);if(d>.5)discard;gl_FragColor=vec4(vC.rgb,vC.a*(1.-d*2.));}`);
     const g = gl, P = this.prog;
     this.loc = {}; ['aP', 'aN', 'aC', 'aU'].forEach(a => this.loc[a] = g.getAttribLocation(P, a));
-    ['uP', 'uV', 'uM', 'uL', 'uSky', 'uGnd', 'uSun', 'uFog', 'uTint', 'uFR', 'uFogOn', 'uUseT', 'uA', 'uE', 'uT'].forEach(u => this.loc[u] = g.getUniformLocation(P, u));
+    ['uCam', 'uP', 'uV', 'uM', 'uL', 'uSky', 'uGnd', 'uSun', 'uFog', 'uTint', 'uFR', 'uFogOn', 'uUseT', 'uA', 'uE', 'uT'].forEach(u => this.loc[u] = g.getUniformLocation(P, u));
     this.ploc = {}; ['aP', 'aC', 'aS'].forEach(a => this.ploc[a] = g.getAttribLocation(this.pprog, a));
     ['uP', 'uV', 'uK'].forEach(u => this.ploc[u] = g.getUniformLocation(this.pprog, u));
     this.white = this.texture(null);
@@ -220,7 +220,7 @@ void main(){vec4 v=uV*vec4(aP,1.);gl_Position=uP*v;gl_PointSize=min(aS*uK/max(-v
     M4.persp(cam.fov, W / Math.max(1, H), cam.near || 0.3, cam.far || 1200, this.proj);
     M4.lookAt(cam.x, cam.y, cam.z, cam.tx, cam.ty, cam.tz, this.view);
     const L = this.loc; gl.useProgram(this.prog);
-    gl.uniformMatrix4fv(L.uP, false, this.proj); gl.uniformMatrix4fv(L.uV, false, this.view);
+    gl.uniformMatrix4fv(L.uP, false, this.proj); gl.uniformMatrix4fv(L.uV, false, this.view); gl.uniform3f(L.uCam, cam.x, cam.y, cam.z);
     const l = scene.light; gl.uniform3fv(L.uL, l.dir); gl.uniform3fv(L.uSky, l.sky); gl.uniform3fv(L.uGnd, l.ground); gl.uniform3fv(L.uSun, l.sun);
     gl.uniform3fv(L.uFog, scene.fog.color); gl.uniform2f(L.uFR, scene.fog.near, scene.fog.far);
     gl.uniform1i(L.uT, 0); gl.activeTexture(gl.TEXTURE0);

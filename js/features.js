@@ -105,6 +105,10 @@ Track.prototype.genFeatures = function () {
   }
   if (alt) t.branches.push(alt);
   t.branches.forEach((b, k) => b.id = k);
+  // coin lines (5 in a row along the driving line) on the main road and the side routes
+  t.coinSpots = [];
+  for (let q = 0; q < 9; q++) { const i = Math.round(N * (0.05 + q * 0.1)) + Math.floor(r() * 10); const lat = (r() - 0.5) * (t.half * 1.4); for (let k = 0; k < 5; k++) t.coinSpots.push({ seg: null, i: t.wrap(i + k * 3), lat }); }
+  for (const b of t.branches) for (const fr of [0.35, 0.6]) { const i = Math.round(b.N * fr); for (let k = 0; k < 4; k++) t.coinSpots.push({ seg: b, i: Math.min(b.N - 2, i + k * 3), lat: 0 }); }
   // 3) hazards & features
   const busy = i => t.branches.some(b => b.near(i, 30)) || i < N * 0.06 || i > N * 0.96;
   const free = []; for (let i = 0; i < N; i += 8) if (!busy(i)) free.push(i);

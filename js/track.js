@@ -41,7 +41,7 @@ class Track {
     const memo = Track._fmemo || (Track._fmemo = {});
     const key = this.def.id + ':' + this.N;
     if (memo[key]) Object.assign(this, memo[key]);
-    else { this.genFeatures(); memo[key] = { branches: this.branches, gates: this.gates, ramps: this.ramps, extraPads: this.extraPads, extraBoxes: this.extraBoxes, patrols: this.patrols, barrels: this.barrels }; }
+    else { this.genFeatures(); memo[key] = { branches: this.branches, gates: this.gates, ramps: this.ramps, extraPads: this.extraPads, extraBoxes: this.extraBoxes, patrols: this.patrols, barrels: this.barrels, coinSpots: this.coinSpots }; }
   }
   _spline() {
     const S = this.def.scale || 1;
@@ -230,6 +230,12 @@ class Track {
       } else if (T.props === 'pines') {
         if (r() < 0.85) { g.cyl(0.35, 2, 5, hexc(0x6b4a2a), 'y', 0, 1, 0); const pc = hexc(0x1f6b45); for (let k = 0; k < 3; k++) { g.cone(2.6 - k * 0.7, 2.6, 7, pc, 0, 1.6 + k * 1.6, 0); g.cone(2.2 - k * 0.6, 0.6, 7, hexc(0xffffff), 0, 3.4 + k * 1.6, 0); } }
         else { g.sphere(1.0, 6, 4, hexc(0xffffff), 0, 0.9, 0); g.sphere(0.75, 6, 4, hexc(0xffffff), 0, 2.2, 0); g.sphere(0.5, 6, 4, hexc(0xffffff), 0, 3.2, 0); g.cone(0.1, 0.5, 4, hexc(0xff8a1c), 0, 3.15, 0.45); }
+      } else if (T.props === 'palms') {
+        const q = r();
+        if (q < 0.62) { const tc = hexc(0xa8804a); for (let k = 0; k < 5; k++) g.cyl(0.32 - k * 0.03, 1.3, 6, tc, 'y', k * 0.22, 0.65 + k * 1.25, 0); const lc = mixc(hexc(0x2f9e4a), hexc(0x5fcf5a), r());
+          for (let k = 0; k < 7; k++) { const a = k / 7 * Math.PI * 2; g.push(M4.trs(1.1 + Math.cos(a) * 1.5, 6.3, Math.sin(a) * 1.5, -a + Math.PI / 2, 0.45, 0)); g.box(0.7, 0.08, 3.2, lc); g.pop(); } g.sphere(0.3, 5, 4, hexc(0x6b4a2a), 1.1, 6.1, 0.3); }
+        else if (q < 0.8) { const uc = hexc([0xff5a5a, 0x2a7fff, 0xffd23a, 0xff7ac8][r() * 4 | 0]); g.cyl(0.06, 2.6, 4, hexc(0xffffff), 'y', 0, 1.3, 0); g.cone(2.0, 0.8, 8, uc, 0, 2.3, 0); g.box(0.7, 0.25, 1.8, hexc(0xffffff), 1.2, 0.3, 0); }
+        else { const rc = mixc(hexc(0x9a8f80), hexc(0xc9bfae), r()); g.sphere(1.6 + r() * 1.6, 6, 4, rc, 0, 0.4, 0, 0.7); }
       } else if (T.props === 'city') {
         const hgt = 8 + r() * 40, wd = 6 + r() * 8; const bc = mixc(hexc(0x1b1530), hexc(0x2a2350), r());
         g.box(wd, hgt, wd, bc, 0, hgt / 2, 0);
@@ -247,6 +253,35 @@ class Track {
         else if ((i / 18) % 3 === 0) { for (let k = 0; k < 3; k++) g.cyl(0.7, 0.45, 8, hexc(k % 2 ? 0x222222 : 0x2a2a2a), 'y', x, y + 0.25 + k * 0.45, z); }
         else if ((i / 18) % 3 === 1 && this.def.theme === 'meadow') { g.box(0.2, 1.4, 0.2, hexc(0xffffff), x, y + 0.7, z); g.box(2.8, 1.1, 0.12, hexc([0xff3b3b, 0x2a7fff, 0xffd23a][i % 3]), x, y + 1.6, z); }
       }
+    }
+    // corner chevron boards on the outside of bends
+    for (let i = 0; i < this.N; i += 7) {
+      const turn = this.curv[i]; if (Math.abs(turn) < 0.2) continue;
+      const out = turn > 0 ? 1 : -1, o = out * (this.wallD + 0.9); const x = this.px[i] - this.tz[i] * o, z = this.pz[i] + this.tx[i] * o;
+      if (this.branches && this.branches.length && this.inBranchCorridor(x, z, null, -3)) continue;
+      g.push(M4.trs(x, this.py[i], z, this.heading(i), 0, 0));
+      g.box(0.3, 2.0, 5.2, hexc(0x1d1d22), 0, 2.4, 0);
+      for (let k = -1; k <= 1; k++) g.box(0.34, 1.1, 0.9, hexc((Math.floor(i / 7) + k) % 2 ? 0xffd23a : 0xff5a1f, 0.75), 0, 2.4, k * 1.6);
+      g.box(0.2, 1.4, 0.2, hexc(0x333344), 0, 0.7, -2); g.box(0.2, 1.4, 0.2, hexc(0x333344), 0, 0.7, 2);
+      g.pop();
+    }
+    // grandstands with a crowd, flags and balloons by the start line
+    { const cols = [0xff5a5a, 0x2a7fff, 0xffd23a, 0x5fe06f, 0xff7ac8, 0xffffff, 0xff9f2e];
+      for (const side of [-1, 1]) for (const i0 of [10, -34]) {
+        const i = this.wrap(i0), o = side * (this.wallD + 7); const x = this.px[i] - this.tz[i] * o, z = this.pz[i] + this.tx[i] * o;
+        if (this.branches && this.inBranchCorridor(x, z, null, -8)) continue;
+        g.push(M4.trs(x, this.py[i] - 0.2, z, this.heading(i) + (side > 0 ? Math.PI : 0), 0, 0));
+        for (let st = 0; st < 4; st++) { g.box(2.2, 1 + st * 1.1, 22, hexc(T.neon ? 0x2a2350 : 0xdfe6ee), -st * 2.2, (1 + st * 1.1) / 2, 0);
+          for (let k = 0; k < 14; k++) { const cz = -10 + k * 1.5 + r() * 0.4; const cc = hexc(cols[r() * cols.length | 0], T.neon ? 0.5 : 0); g.box(0.6, 0.9, 0.6, cc, -st * 2.2, 1 + st * 1.1 + 0.45, cz); g.sphere(0.28, 5, 3, hexc(0xf2c9a0), -st * 2.2, 1 + st * 1.1 + 1.15, cz); } }
+        g.box(9.5, 0.3, 23, hexc(T.wall[0], T.neon ? 0.6 : 0), -3.3, 7.2, 0); for (const zz of [-11, 11]) g.box(0.3, 7.2, 0.3, hexc(0x8a9099), 0.8, 3.6, zz);
+        g.pop();
+      }
+      for (let i = 20; i < this.N; i += 46) for (const side of [-1, 1]) { // flag poles
+        const o = side * (this.wallD + 1.6); const x = this.px[i] - this.tz[i] * o, z = this.pz[i] + this.tx[i] * o; if (this.branches && this.inBranchCorridor(x, z, null, -3)) continue;
+        g.push(M4.trs(x, this.py[i], z, this.heading(i), 0, 0)); g.cyl(0.08, 6, 4, hexc(0xdfe6ee), 'y', 0, 3, 0); g.box(0.06, 1.1, 1.8, hexc(cols[(i / 46 | 0) % cols.length], T.neon ? 0.7 : 0.1), 0, 5.3, 0.95); g.pop(); }
+      if (!T.neon) for (let k = 0; k < 6; k++) { // hot-air balloons
+        const x = lerp(B.minx - 60, B.maxx + 60, r()), z = lerp(B.minz - 60, B.maxz + 60, r()), y = 70 + r() * 70, c1 = hexc(cols[r() * cols.length | 0], 0.25), c2 = hexc(cols[r() * cols.length | 0], 0.25);
+        g.sphere(9, 10, 7, c1, x, y, z, 1.15); g.cyl(9.05, 3, 10, c2, 'y', x, y, z); g.cyl(1.6, 7, 8, c1, 'y', x, y - 10, z, c1, 6.5); g.box(2.4, 2, 2.4, hexc(0x8a5f36), x, y - 14, z); }
     }
     // distant mountains ring (not in city)
     if (T.props !== 'city') {

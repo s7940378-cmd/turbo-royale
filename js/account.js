@@ -66,7 +66,7 @@ const Account = {
     let coins, xp;
     if (res.mode === 'tt') { coins = 80; xp = 450; if (res.time && (!p.best[res.track] || res.time < p.best[res.track])) { if (p.best[res.track]) { coins += 120; xp += 200; } p.best[res.track] = +res.time.toFixed(2); res.newBest = true; } }
     else { const i = Math.round((place - 1) / Math.max(1, n - 1) * 7); coins = PLACE_COINS[i] || 40; xp = PLACE_XP[i] || 300; }
-    xp += (res.stats.rockethit || 0) * 40 + (res.stats.driftboost || 0) * 10 + (res.stats.box || 0) * 5;
+    coins += Math.min(50, res.stats.coin || 0); xp += (res.stats.rockethit || 0) * 40 + (res.stats.driftboost || 0) * 10 + (res.stats.box || 0) * 5;
     p.stats.races++; if (place === 1 && res.mode !== 'tt') p.stats.wins++; if (place <= 3 && res.mode !== 'tt') p.stats.podiums++;
     // challenges (daily, 3-day, weekly)
     const st = Object.assign({}, res.stats, { partyrace: res.party ? 1 : 0 });

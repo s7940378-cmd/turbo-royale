@@ -30,8 +30,20 @@ class Race {
     this.host = opts.host !== false; this.net = opts.net || null;
     this.quality = app.settings.quality;
     this.scene = { meshes: [], particles: [], fog: { color: this.track.theme.fog, near: this.track.theme.fogN, far: this.track.theme.fogF }, light: this.track.theme.light, sky: this.track.theme.fog };
-    const L = this.scene.light; const l = Math.hypot(...L.dir); L.dir = L.dir.map(v => v / l);
+    const TH = this.track.theme, sd = (opts.seed >>> 0) % 10;
+    let tod = TH.neon ? 'day' : ['day', 'day', 'day', 'day', 'sunset', 'sunset', 'night', 'rain', 'day', 'sunset'][sd];
+    if (tod === 'rain' && this.def.theme === 'snow') tod = 'snow'; if (tod === 'rain' && this.def.theme === 'desert') tod = 'sunset';
+    if (this.def.theme === 'snow' && tod === 'day' && sd < 2) tod = 'snow';
+    this.tod = tod;
+    const L = this.scene.light = { dir: TH.light.dir.slice(), sky: TH.light.sky.slice(), ground: TH.light.ground.slice(), sun: TH.light.sun.slice() };
+    let skyTint = [1, 1, 1], fogC = TH.fog.slice();
+    if (tod === 'sunset') { L.dir = [0.75, 0.38, 0.3]; L.sun = [1.0, 0.56, 0.3]; L.sky = [0.62, 0.52, 0.58]; L.ground = [0.42, 0.3, 0.3]; fogC = [1.0, 0.72, 0.5]; skyTint = [1.0, 0.68, 0.52]; }
+    else if (tod === 'night') { L.dir = [-0.3, 0.8, 0.4]; L.sun = [0.28, 0.32, 0.5]; L.sky = [0.34, 0.38, 0.6]; L.ground = [0.2, 0.2, 0.34]; fogC = [0.1, 0.12, 0.26]; skyTint = [0.16, 0.2, 0.44]; }
+    else if (tod === 'rain' || tod === 'snow') { L.sun = L.sun.map(v => v * 0.6); L.sky = [0.6, 0.64, 0.7]; fogC = tod === 'snow' ? [0.88, 0.92, 0.97] : [0.6, 0.66, 0.72]; skyTint = tod === 'snow' ? [0.9, 0.93, 0.97] : [0.68, 0.72, 0.78]; this.scene.fog.near *= 0.7; this.scene.fog.far *= 0.8; }
+    this.scene.fog.color = fogC; this.scene.sky = fogC;
+    const l = Math.hypot(...L.dir); L.dir = L.dir.map(v => v / l);
     this.scene.meshes.push(...this.track.build(this.R, this.quality));
+    this.track.skyMesh.tint = skyTint;
     this.fxAdd = new Particles(1800, true); this.fxN = new Particles(1400, false);
     this.scene.particles.push(this.fxN, this.fxAdd);
     this.props = KartFactory.propGeo(this.R);
@@ -41,7 +53,7 @@ class Race {
     this.byId = Object.fromEntries(this.racers.map(r => [r.id, r]));
     this.racers.forEach(r => { r.view = new KartView(this.R, r.cos); this.scene.meshes.push(...r.view.meshes); });
     this._grid();
-    this._boxes(); this._pads(); this._features();
+    this._boxes(); this._pads(); this._features(); this._coins();
     this.proj = []; this.slicks = []; this.fxSeen = new Set();
     this.state = 'intro'; this.t = 0; this.raceTime = 0; this.introT = 2.2; this.count = 3.6; this.lastCount = 4;
     this.cam = { x: 0, y: 20, z: 0, tx: 0, ty: 0, tz: 0, fov: 1.2, near: 0.3, far: 1400 };
@@ -51,6 +63,12 @@ class Race {
     this.done = false; this.resultsShown = false; this.finishWait = 0;
     this.netT = 0; this.messages = [];
     this._hud();
+    const todMsg = { sunset: '🌅 Sunset race', night: '🌙 Night race', rain: '🌧 Rainy race', snow: '🌨 Snowy race' }[this.tod]; if (todMsg) this.feed(todMsg);
+  }
+  _coins() {
+    const t = this.track, g = new Geo(); g.cyl(0.6, 0.14, 14, hexc(0xffc928, 0.45), 'z', 0, 0, 0, hexc(0xffe98a, 0.6)); g.box(0.16, 0.6, 0.18, hexc(0xb57a00, 0.2), 0, 0, 0);
+    this.coinGeo = this.R.upload(g);
+    this.coins = (t.coinSpots || []).filter((c, k) => this.quality !== 'low' || k % 5 !== 4).map(c => { const P = c.seg || t, p = P.point(c.i, c.lat); const m = this.R.mesh(this.coinGeo); this.scene.meshes.push(m); return { x: p[0], y: p[1] + 1.1, z: p[2], on: true, t: 0, m, ph: c.i * 0.35 }; });
   }
   _grid() {
     const t = this.track, order = this.racers.slice();
@@ -98,6 +116,7 @@ class Race {
     const rg = new Geo(), th = t.def.theme;
     if (th === 'meadow') { rg.cyl(1.4, 2.4, 12, hexc(0xe8c04a), 'x', 0, 0, 0, hexc(0xc89a3a)); rg.cyl(1.42, 0.15, 12, hexc(0xa0702a), 'x', 0.6, 0, 0); rg.cyl(1.42, 0.15, 12, hexc(0xa0702a), 'x', -0.6, 0, 0); }
     else if (th === 'desert') { rg.sphere(1.6, 8, 6, hexc(0xa8744a), 0, 0, 0); rg.sphere(0.8, 6, 4, hexc(0x8a5f36), 0.9, 0.6, 0.4); }
+    else if (th === 'beach') { rg.sphere(1.6, 10, 7, hexc(0xffffff), 0, 0, 0); rg.cyl(1.62, 0.7, 12, hexc(0xff5a5a), 'x', 0, 0, 0); rg.cyl(1.63, 0.25, 12, hexc(0x2a7fff), 'y', 0, 0, 0); }
     else if (th === 'snow') { rg.sphere(1.7, 10, 7, hexc(0xf4f8ff, 0.1), 0, 0, 0); }
     else { rg.box(2.4, 0.6, 2.4, hexc(0x2a2350), 0, 0, 0); rg.cyl(1.5, 0.15, 14, hexc(0xff2bd6, 1), 'y', 0, -0.2, 0); rg.sphere(0.4, 6, 4, hexc(0xff3030, 1), 0, 0.4, 1.0); }
     const rgeo = R.upload(rg);
@@ -154,6 +173,7 @@ class Race {
     dt = Math.min(dt, 0.05);
     this.t += dt;
     const ctl = Input.read();
+    if (this.app.settings.autoGas && !ctl.brake) ctl.gas = 1;
     if (this.state === 'intro') { this.introT -= dt; if (this.introT <= 0 || ctl.gas && this.t > 0.6) { this.state = 'count'; } }
     else if (this.state === 'count') {
       this.count -= dt; const c = Math.ceil(this.count - 0.6);
@@ -204,6 +224,8 @@ class Race {
     let f = r.vx * fx + r.vz * fz, lat = r.vx * rx + r.vz * rz;
     const S = r.seg || t, surf = r.seg ? r.seg.type : 'road';
     const offroad = Math.abs(r.lat) > S.half + 1.4 || surf === 'dirt';
+    if (r.local && !r.finished && this.app.settings.assist && Math.abs(r.lat) > S.half - 2.5) c = Object.assign({}, c, { steer: clamp(c.steer - Math.sign(r.lat) * clamp((Math.abs(r.lat) - (S.half - 2.5)) / 3, 0, 1) * 0.9, -1, 1) });
+    maxF *= 1 + 0.004 * (r.coins || 0); if (r.cj > 0) maxF *= 0.97;
     const air = r.airY > 0.05 || r.vy > 0;
     if (r.slow > 0) { r.slow -= dt; maxF *= 0.65; }
     if (offroad && r.boost <= 0 && !r.out && !air) maxF *= surf === 'dirt' && Math.abs(r.lat) <= S.half + 1.4 ? (r.offroadOK ? 1 : 0.8) : (r.offroadOK ? 0.78 : 0.5);
@@ -233,6 +255,9 @@ class Race {
       else if (!c.brake) f *= 1 - 0.55 * dt;
       if (c.brake) { if (f > 0.5) f -= 38 * dt; else f = Math.max(f - 14 * dt, -11); }
       if (!c.gas && !c.brake && Math.abs(f) < 0.3) f = 0;
+      // charge jump: hold drift while driving straight, release to hop and land with a boost
+      if (c.drift && !r.drift && !air && Math.abs(c.steer) <= 0.25 && f > 14) r.cj = (r.cj || 0) + dt;
+      else { if (!c.drift && r.cj > 0.4 && !air && !r.drift) { r.vy = 8.5; r.airY = 0.06; r.trick = true; r.trickT = 0.45; r.cjJump = true; if (r.local) { Sfx.play('mini', 0); this.stats.cjump = (this.stats.cjump || 0) + 1; } } r.cj = 0; }
       // drift
       if (air && c.drift && !r._dPrev && !r.trick) { r.trick = true; r.trickT = 0.45; if (r.local) Sfx.play('tick'); }
       if (c.drift && !r.drift && Math.abs(c.steer) > 0.25 && f > 14 && (!offroad || surf === 'dirt') && !air) { r.drift = true; r.driftDir = Math.sign(c.steer); r.charge = 0; r.hop = 0.35; r.driftK = 0; }
@@ -280,7 +305,7 @@ class Race {
     }
     if (r.airY > 0 || r.vy > 0) {
       r.vy -= 25 * dt; r.airY += r.vy * dt;
-      if (r.airY <= 0) { r.airY = 0; r.vy = 0; if (r.trick) { r.boost = Math.max(r.boost, 0.85 * st[3]); if (r.local) { this.stats.trick = (this.stats.trick || 0) + 1; Sfx.play('mini', 2); this.msg('', 'TRICK BOOST!', 0.9); } } r.trick = false; this._burst(r.x, r.y, r.z, 8, [0.9, 0.9, 0.9]); }
+      if (r.airY <= 0) { r.airY = 0; r.vy = 0; if (r.trick) { r.boost = Math.max(r.boost, (r.cjJump ? 0.45 : 0.85) * st[3]); if (r.local) { if (!r.cjJump) this.stats.trick = (this.stats.trick || 0) + 1; Sfx.play('mini', 2); this.msg('', r.cjJump ? 'JUMP BOOST!' : 'TRICK BOOST!', 0.9); } } r.trick = false; r.cjJump = false; r.sq = -0.3; this._burst(r.x, r.y, r.z, 8, [0.9, 0.9, 0.9]); }
     }
     if (r.trickT > 0) r.trickT -= dt;
     r.y = gy > r.y ? gy : lerp(r.y, gy, 0.6); // never below the road surface
@@ -508,6 +533,10 @@ class Race {
       if (Math.hypot(s.x - r.x, s.z - r.z) < 2.3) { s.dead = true; this.hit(r, s.decoy ? 'decoy' : 'oil', s.owner); if (s.decoy) this._burst(s.x, s.y + 1.3, s.z, 20, [1, 0.3, 0.3]); this.sendFx({ t: 'x', id: 'x' + s.id, sid: s.id }); }
     }
     if (r.shield > 0) r.shield -= dt;
+    for (const cn of this.coins) { if (!cn.on || Math.abs(cn.x - r.x) > 2 || Math.abs(cn.z - r.z) > 2 || Math.abs(cn.y - r.y - (r.visAir || 0)) > 3.2) continue;
+      cn.on = false; cn.t = 7; r.coins = Math.min(20, (r.coins || 0) + 1);
+      for (let q = 0; q < 5; q++) this.fxAdd.emit(cn.x, cn.y, cn.z, (Math.random() - 0.5) * 4, 3 + Math.random() * 3, (Math.random() - 0.5) * 4, [1, 0.85, 0.3, 1], 0.5, 0.4, 0, 10);
+      if (r.local) { Sfx.play('coin'); this.stats.coin = (this.stats.coin || 0) + 1; } }
     if (r.item === 'gold' && !(r.goldT > 0) && r.goldUsed) { r.item = null; r.goldUsed = false; if (r.local) this.setItemUI(); }
     // explosive barrels
     for (const b of this.barrels) if (b.on && Math.hypot(b.x - r.x, b.z - r.z) < 2.1 && !(r.airY > 1.5)) this.explodeBarrel(b, true);
@@ -610,6 +639,8 @@ class Race {
     if (r.torp > 0) return false;
     if (r.shield > 0) { r.shield = 0; if (r.local || this._near(r)) Sfx.play('pop'); this._burst(r.x, r.y + 1, r.z, 14, [0.4, 0.9, 1]); return false; }
     if (r.local) this.stats.hitsTaken = (this.stats.hitsTaken || 0) + 1;
+    if (r.coins > 0) { const lost = Math.min(3, r.coins); r.coins -= lost; for (let q = 0; q < lost * 4; q++) this.fxAdd.emit(r.x, r.y + 1, r.z, (Math.random() - 0.5) * 10, 5 + Math.random() * 5, (Math.random() - 0.5) * 10, [1, 0.8, 0.2, 1], 0.9, 0.8, 0, 16); }
+    r.sq = 0.25;
     this.spinOut(r, kind === 'rocket' || kind === 'boom' ? 1.25 : 0.95, kind === 'rocket' || kind === 'boom' ? 2 : 1); r.boost = 0; r.drift = false; r.charge = 0;
     if (kind === 'rocket') { r.vx *= 0.3; r.vz *= 0.3; }
     if (r.local) { Sfx.play('hit'); this.shake = 0.5; }
@@ -662,7 +693,7 @@ class Race {
     this.koNext -= dt;
     const alive = this.racers.filter(r => !r.elim);
     if (this.koNext <= 0 && alive.length > 1) {
-      this.koNext = alive.length > 4 ? 20 : 25;
+      this.koNext = alive.length > 8 ? 14 : alive.length > 4 ? 20 : 25;
       const last = alive.sort((a, b) => a.prog - b.prog)[0];
       this.sendFx({ t: 'k', id: 'k' + this.raceTime.toFixed(1), who: last.id });
       this._eliminate(last);
@@ -680,6 +711,7 @@ class Race {
   }
   _hazards(dt) {
     const t = this.track, T = this.raceTime;
+    for (const cn of this.coins) { if (!cn.on) { cn.t -= dt; if (cn.t <= 0) cn.on = true; } cn.m.visible = cn.on; if (cn.on) M4.trs(cn.x, cn.y + Math.sin(this.t * 2.5 + cn.ph) * 0.12, cn.z, this.t * 3 + cn.ph, 0, 0, 1, cn.m.m); }
     for (const g of this.gates) if (g.open > 0) { g.open -= dt; if (g.open <= 0) { g.open = 0; g.m.visible = true; this._burst(g.x, g.y + 1.5, g.z, 14, [1, 0.9, 0.5]); } }
     for (const b of this.barrels) { if (!b.on) { b.t -= dt; if (b.t <= 0) b.on = true; } b.m.visible = b.on; }
     for (const h of this.patrols) {
@@ -751,6 +783,7 @@ class Race {
     const fx = Math.sin(r.yaw), fz = Math.cos(r.yaw), rx = -fz, rz = fx;
     const back = (s, h) => [r.x - fx * 1.3 + rx * s, r.y + (h || 0.3), r.z - fz * 1.3 + rz * s];
     const sp = Math.abs(r.f);
+    if (r.cj > 0.1) { const col = r.cj > 0.4 ? [0.3, 1, 0.6, 1] : [1, 1, 0.8, 0.6]; for (const s of [-0.85, 0.85]) { const p = back(s, 0.15); this.fxAdd.emit(p[0], p[1], p[2], (Math.random() - 0.5) * 5, 2 + Math.random() * 4, (Math.random() - 0.5) * 5, col, 0.5, 0.25, 0, 12); } }
     // drift sparks
     if (r.drift) {
       const col = r.charge >= 2.6 ? [0.8, 0.3, 1, 1] : r.charge >= 1.6 ? [1, 0.55, 0.1, 1] : r.charge >= 0.7 ? [0.25, 0.7, 1, 1] : [1, 1, 0.8, 0.6];
@@ -764,7 +797,12 @@ class Race {
     const k = (CAT[r.cos.trail] || CAT.t_none).kind; if (k === 'none' || sp < 6) return;
     r.trailT -= dt; if (r.trailT > 0) return; r.trailT = this.quality === 'low' ? 0.05 : 0.025;
     const p = back((Math.random() - 0.5) * 1.2, 0.5);
-    if (k === 'smoke') this.fxN.emit(p[0], p[1], p[2], 0, 1.2, 0, [0.6, 0.6, 0.62, 0.5], 1.2, 1.1, 2.5);
+    if (k === 'hearts') this.fxAdd.emit(p[0], p[1] + Math.random() * 0.5, p[2], (Math.random() - 0.5), 1.5, (Math.random() - 0.5), [1, 0.3, 0.55, 1], 0.9, 0.9, -0.5);
+    else if (k === 'bolt') { this.fxAdd.emit(p[0], p[1] + Math.random(), p[2], (Math.random() - 0.5) * 8, (Math.random() - 0.5) * 8, (Math.random() - 0.5) * 8, [1, 1, 0.5 + Math.random() * 0.5, 1], 0.6, 0.18); }
+    else if (k === 'leaf') this.fxN.emit(p[0], p[1], p[2], (Math.random() - 0.5) * 3, 1.5 + Math.random(), (Math.random() - 0.5) * 3, [0.3 + Math.random() * 0.3, 0.8, 0.3, 0.9], 0.5, 1.2, 0, 3);
+    else if (k === 'star') { this.fxAdd.emit(p[0], p[1], p[2], 0, 0.4, 0, [1, 0.85, 0.3, 1], 1.1, 1.0, -0.8); this.fxAdd.emit(p[0] + (Math.random() - 0.5), p[1] + Math.random(), p[2] + (Math.random() - 0.5), 0, 0, 0, [1, 1, 1, 1], 0.35, 0.5); }
+    else if (k === 'shadow') { this.fxN.emit(p[0], p[1], p[2], 0, 1, 0, [0.12, 0.05, 0.2, 0.75], 1.4, 1.1, 2); this.fxAdd.emit(p[0], p[1], p[2], 0, 1.5, 0, [0.6, 0.2, 1, 1], 0.4, 0.5); }
+    else if (k === 'smoke') this.fxN.emit(p[0], p[1], p[2], 0, 1.2, 0, [0.6, 0.6, 0.62, 0.5], 1.2, 1.1, 2.5);
     else if (k === 'fire') this.fxAdd.emit(p[0], p[1], p[2], 0, 2, 0, [1, 0.35 + Math.random() * 0.4, 0.1, 1], 1.1, 0.5, -1.5);
     else if (k === 'rainbow') { const h = (this.t * 2) % 1; const c = hsl(h); for (const s of [-0.6, 0, 0.6]) { const q = back(s, 0.4); this.fxAdd.emit(q[0], q[1], q[2], 0, 0, 0, [c[0], c[1], c[2], 0.9], 1.0, 1.2); } }
     else if (k === 'sparkle') this.fxAdd.emit(p[0] + (Math.random() - 0.5), p[1] + Math.random(), p[2], (Math.random() - 0.5) * 2, 1, (Math.random() - 0.5) * 2, [1, 0.9, 0.4 + Math.random() * 0.6, 1], 0.5, 0.9, -0.3);
@@ -772,14 +810,20 @@ class Race {
     else if (k === 'ice') { this.fxAdd.emit(p[0], p[1], p[2], (Math.random() - 0.5) * 2, 0.5, (Math.random() - 0.5) * 2, [0.6, 0.9, 1, 1], 0.6, 1.0, 0, 2); }
   }
   _fxUpdate(dt) {
+    if (this.tod === 'rain' || this.tod === 'snow') { const c = this.cam, n = this.quality === 'low' ? 3 : 7, sn = this.tod === 'snow';
+      for (let q = 0; q < n; q++) this.fxN.emit(c.x + (Math.random() - 0.5) * 50, c.y + 6 + Math.random() * 10, c.z + (Math.random() - 0.5) * 50, sn ? (Math.random() - 0.5) * 3 : 2, sn ? -5 : -40, sn ? (Math.random() - 0.5) * 3 : 0, sn ? [1, 1, 1, 0.9] : [0.75, 0.85, 1, 0.55], sn ? 0.45 : 0.28, sn ? 2.4 : 0.45); }
     this.fxAdd.update(dt); this.fxN.update(dt);
     for (const r of this.racers) {
       const a = r.elim ? 0 : 1;
       r.visYaw = r.yaw + (r.drift ? r.driftDir * -(0.3 + 0.1 * (r.driftK || 0)) : 0) + (r.spin > 0 ? (r.spinAng || 0) : 0);
       const vy = r.visYaw;
       const flash = r.spin > 0 && Math.floor(this.t * 12) % 2 === 0;
+      r.sq = r.sq || 0; r.sqV = (r.sqV || 0) + (-220 * r.sq - 15 * r.sqV) * dt; r.sq = clamp(r.sq + r.sqV * dt, -0.4, 0.4);
+      r.stz = r.stz || 0; if (r.boost > 0 && !r._bPrev) r.stz = 0.28; r._bPrev = r.boost > 0; r.stzV = (r.stzV || 0) + (-160 * r.stz - 13 * r.stzV) * dt; r.stz = clamp(r.stz + r.stzV * dt, -0.3, 0.4);
+      r.leanV = lerp(r.leanV || 0, -r.steer * 0.07 * clamp(r.f / 28, 0, 1), 1 - Math.exp(-8 * dt));
+      const jit = (this.state === 'count' || this.state === 'intro') ? Math.sin(this.t * 55 + r.phase * 9) * 0.012 : Math.abs(r.f) > 5 ? Math.sin(this.t * 31 + r.phase * 5) * 0.008 : 0;
       const trickRoll = r.trickT > 0 ? (1 - r.trickT / 0.45) * Math.PI * 2 * (r.driftDir < 0 ? -1 : 1) : 0;
-      r.view.update(r.x, r.y + (r.visAir || 0), r.z, vy, r.pitch, r.roll + trickRoll, r.steer, r.f, dt, { hop: r.hop * 0.6, shield: r.shield > 0, alpha: a, flash, torp: r.torp > 0 });
+      r.view.update(r.x, r.y + (r.visAir || 0), r.z, vy, r.pitch, r.roll + trickRoll, r.steer, r.f, dt, { hop: r.hop * 0.6, shield: r.shield > 0, alpha: a, flash, torp: r.torp > 0, sq: r.sq, stz: r.stz, lean: r.leanV, jit });
       if (r.remote || r.bot) this._trailsRemoteOnly(r, dt);
     }
   }
@@ -793,6 +837,10 @@ class Race {
       const a = this.t * 0.6 + r.yaw + 2.2, d = 18 - this.t * 3;
       c.x = r.x + Math.sin(a) * d; c.z = r.z + Math.cos(a) * d; c.y = r.y + 5 + this.introT * 2; c.tx = r.x; c.ty = r.y + 1; c.tz = r.z; c.fov = 1.1;
       this.camYaw = r.yaw;
+    } else if (r === this.me && r.finished && !r.elim) { // victory orbit
+      const a = this.t * 0.45, k = 1 - Math.exp(-3 * dt);
+      c.x = lerp(c.x, r.x + Math.sin(a) * 9, k); c.z = lerp(c.z, r.z + Math.cos(a) * 9, k); c.y = lerp(c.y, Math.max(r.y + 3.4, this.track.groundHeight(c.x, c.z) + 1.5), k);
+      c.tx = r.x; c.ty = r.y + 1.1; c.tz = r.z; c.fov = lerp(c.fov, 1.0, k);
     } else {
       this.camYaw += angDiff(this.camYaw, r.yaw + (r.drift ? -r.driftDir * 0.18 : 0)) * (1 - Math.exp(-6 * dt));
       const back = ctl.look && this.me === r ? -7.5 : 7.5;
@@ -801,7 +849,7 @@ class Race {
       const k = 1 - Math.exp(-10 * dt);
       c.x = lerp(c.x, tx, k); c.z = lerp(c.z, tz, k); c.y = lerp(c.y, ty, k);
       if (Math.hypot(c.x - tx, c.z - tz) > 30) { c.x = tx; c.z = tz; c.y = ty; }
-      c.tx = r.x + fx * (back > 0 ? 4 : -4); c.ty = r.y + 1.3; c.tz = r.z + fz * (back > 0 ? 4 : -4);
+      c.tx = r.x + fx * (back > 0 ? 4 : -4); c.ty = r.y + 1.3 + (r.visAir || 0) * 0.6; c.tz = r.z + fz * (back > 0 ? 4 : -4);
       const tf = 1.15 + (r.boost > 0 ? 0.18 : 0) + clamp(r.f / 50, 0, 1) * 0.1;
       c.fov = lerp(c.fov, tf, 1 - Math.exp(-4 * dt));
     }
@@ -817,6 +865,8 @@ class Race {
     h.lap.textContent = `${clamp(r.lap, 1, this.laps)}/${this.laps}`;
     h.time.textContent = fmtTime(r.finished ? r.ftime : this.raceTime);
     h.spd.textContent = Math.round(Math.abs(r.f) * 2);
+    if (this._hc !== (r.coins || 0)) { this._hc = r.coins || 0; const hc = document.getElementById('hCoins'); if (hc) { hc.textContent = this._hc; hc.parentElement.classList.toggle('max', this._hc >= 20); } }
+    { const sf = document.getElementById('speedfx'); if (sf) { const tg = this.spectate ? 0 : (r.boost > 0 || r.torp > 0) ? 0.6 : clamp((r.f - 37) / 14, 0, 1) * 0.22; this._sf = lerp(this._sf || 0, tg, 0.15); sf.style.opacity = this._sf.toFixed(2); } }
     if (r.item === 'gold' && r.goldT > 0) this.h.itemN.textContent = Math.ceil(r.goldT) + 's';
     h.boostBar.className = 'drift ' + (r.drift ? (r.charge >= 2.6 ? 'l3' : r.charge >= 1.6 ? 'l2' : r.charge >= 0.7 ? 'l1' : 'l0') : '');
     if (this.mode === 'ko') h.ko.innerHTML = `<b>${n}</b> LEFT · next knockout <b>${Math.max(0, Math.ceil(this.koNext))}s</b>`;
@@ -835,7 +885,7 @@ class Race {
     // standings list (top-left mini)
     if (!this._lt || this.t - this._lt > 0.25) {
       this._lt = this.t;
-      h.list.innerHTML = this.order.slice(0, 8).map(o => `<div class="${o.local ? 'me' : ''} ${o.elim ? 'out' : ''}"><span>${o.place}</span>${esc(o.name)}</div>`).join('');
+      h.list.innerHTML = this.order.slice(0, 12).map(o => `<div class="${o.local ? 'me' : ''} ${o.elim ? 'out' : ''}"><span>${o.place}</span>${esc(o.name)}</div>`).join('');
     }
     if (this.spectate) h.sub.textContent = h.sub.textContent || '';
     if (this.flash > 0) { this.flash -= dt; document.getElementById('flash').style.opacity = this.flash; }
@@ -844,7 +894,7 @@ class Race {
   dispose() {
     for (const m of this.scene.meshes) { /* geometry for karts is cached/shared; free track meshes */ }
     for (const m of this.track.meshes) this.R.free(m.g);
-    Sfx.engine(false);
+    Sfx.engine(false); this.R.free(this.coinGeo); { const sf = document.getElementById('speedfx'); if (sf) sf.style.opacity = 0; }
     this.h.root.classList.add('hidden');
   }
 }

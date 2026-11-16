@@ -95,6 +95,7 @@ const Sfx = (() => {
         case 'beep': tone(440, 0.25, 'square', 0.15); break;
         case 'go': tone(880, 0.6, 'square', 0.18); break;
         case 'box': tone(660, 0.08, 'triangle', 0.2); tone(990, 0.12, 'triangle', 0.2, 0, 0.06); break;
+        case 'coin': tone(988, 0.07, 'square', 0.09); tone(1319, 0.22, 'square', 0.09, 0, 0.07); break;
         case 'tick': tone(1200 + Math.random() * 400, 0.03, 'square', 0.05); break;
         case 'got': tone(784, 0.1, 'triangle', 0.2); tone(1046, 0.18, 'triangle', 0.2, 0, 0.08); break;
         case 'boost': noise(0.6, 0.35, 400, 2400); tone(200, 0.5, 'sawtooth', 0.08, 600); break;

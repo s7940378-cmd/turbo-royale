@@ -203,6 +203,9 @@ kbd{background:rgba(255,255,255,.15);border-radius:5px;padding:1px 6px;font-weig
 .sbar i.old{background:rgba(255,255,255,.35)}
 .srow b{text-align:right;font-size:13px}
 .srow em{font-style:normal;font-size:11px;margin-left:3px}.srow em.up{color:#5fe06f}.srow em.dn{color:#ff6a6a}
+#speedfx{position:fixed;inset:0;z-index:4;pointer-events:none;opacity:0;background:repeating-conic-gradient(from 0deg at 50% 55%,rgba(255,255,255,0) 0deg 5deg,rgba(255,255,255,.55) 5.4deg 5.8deg,rgba(255,255,255,0) 6.2deg 11deg);-webkit-mask-image:radial-gradient(ellipse at 50% 55%,transparent 38%,#000 85%);mask-image:radial-gradient(ellipse at 50% 55%,transparent 38%,#000 85%)}
+#vig{position:fixed;inset:0;z-index:3;pointer-events:none;background:radial-gradient(ellipse at 50% 50%,transparent 62%,rgba(5,8,30,.32) 100%)}
+.coinbox{display:flex;align-items:center;gap:6px}.coinbox.max{border-color:var(--yellow);color:var(--yellow)}
 #flash{position:fixed;inset:0;z-index:7;background:#bfe8ff;opacity:0;pointer-events:none;mix-blend-mode:screen}
 #touch{position:fixed;inset:auto 0 0 0;height:180px;z-index:8;pointer-events:none}
 #touch button{position:absolute;pointer-events:auto;width:84px;height:84px;border-radius:50%;background:rgba(255,255,255,.18);border:3px solid rgba(255,255,255,.35);font-size:30px;font-family:system-ui;touch-action:none}
@@ -224,6 +227,7 @@ kbd{background:rgba(255,255,255,.15);border-radius:5px;padding:1px 6px;font-weig
 <body>
 <canvas id="gl"></canvas>
 <div id="flash"></div>
+<div id="speedfx"></div><div id="vig"></div>
 
 <div id="boot"><div class="logo">Turbo<small>Royale</small></div><div class="spinner"></div><div id="bootMsg">Warming up engines…</div></div>
 
@@ -290,7 +294,7 @@ kbd{background:rgba(255,255,255,.15);border-radius:5px;padding:1px 6px;font-weig
 
 <div id="hud" class="hidden">
   <div id="hTags"></div>
-  <div id="hTopL"><div class="hbox"><small>LAP</small><span id="hLap">1/3</span></div><div class="hbox"><small>TIME</small><span id="hTime">0:00.00</span></div><div id="hList"></div></div>
+  <div id="hTopL"><div class="hbox"><small>LAP</small><span id="hLap">1/3</span></div><div class="hbox"><small>TIME</small><span id="hTime">0:00.00</span></div><div class="hbox coinbox"><span class="coin"></span><span id="hCoins">0</span><small style="margin-left:4px">/20</small></div><div id="hList"></div></div>
   <div id="hItemBox"><span id="hItem"></span><span id="hItemN"></span><span id="hItemKey">E / Enter to use</span></div>
   <div id="hKo" class="hidden"></div>
   <div class="pos" id="hPos">1</div>
@@ -314,21 +318,21 @@ kbd{background:rgba(255,255,255,.15);border-radius:5px;padding:1px 6px;font-weig
 <div id="results" class="hidden"><div class="mbox">
   <div id="resTitle">Victory!</div><div style="text-align:center;font-weight:900;opacity:.85" id="resSub"></div>
   <div class="resgrid"><div id="resRows"></div><div id="resRewards"></div></div>
-  <div class="row" style="justify-content:flex-end;margin-top:16px;gap:10px"><button class="btn" id="resAgain">Race again</button><button class="btn y" id="resOk">Continue</button></div>
+  <div class="row" style="justify-content:flex-end;margin-top:16px;gap:10px"><button class="btn" id="resAgain">Race again</button><button class="btn b" id="resNext">Next track ▶</button><button class="btn y" id="resOk">Continue</button></div>
 </div></div>
 
 <div id="modal" class="modal hidden"><div class="mbox" id="mbox"></div></div>
 <div id="toasts"></div>
 
-<script src="js/engine.js?v=202611121348"></script>
-<script src="js/data.js?v=202611121348"></script>
-<script src="js/sys.js?v=202611121348"></script>
-<script src="js/kart.js?v=202611121348"></script>
-<script src="js/track.js?v=202611121348"></script>
-<script src="js/features.js?v=202611121348"></script>
-<script src="js/race.js?v=202611121348"></script>
-<script src="js/account.js?v=202611121348"></script>
-<script src="js/net.js?v=202611121348"></script>
-<script src="js/main.js?v=202611121348"></script>
+<script src="js/engine.js?v=202611161304"></script>
+<script src="js/data.js?v=202611161304"></script>
+<script src="js/sys.js?v=202611161304"></script>
+<script src="js/kart.js?v=202611161304"></script>
+<script src="js/track.js?v=202611161304"></script>
+<script src="js/features.js?v=202611161304"></script>
+<script src="js/race.js?v=202611161304"></script>
+<script src="js/account.js?v=202611161304"></script>
+<script src="js/net.js?v=202611161304"></script>
+<script src="js/main.js?v=202611161304"></script>
 </body>
 </html>

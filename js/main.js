@@ -2,7 +2,7 @@
 'use strict';
 const $ = s => document.getElementById(s);
 const App = window.App = {
-  settings: Object.assign({ quality: 'high', difficulty: 'normal', muted: false }, (() => { try { return JSON.parse(localStorage.getItem('tr_settings') || '{}'); } catch (e) { return {}; } })()),
+  settings: Object.assign({ quality: 'high', difficulty: 'normal', muted: false, autoGas: false, assist: false }, (() => { try { return JSON.parse(localStorage.getItem('tr_settings') || '{}'); } catch (e) { return {}; } })()),
   sel: { mode: 'gp', track: 'sunny' }, tab: 'play', race: null, paused: false, slot: 'body',
   saveSettings() { try { localStorage.setItem('tr_settings', JSON.stringify(this.settings)); } catch (e) { } },
 
@@ -118,6 +118,7 @@ const App = window.App = {
     $('playBtn').onclick = () => this.play();
     $('daily').onclick = () => { const p = Account.profile; p.lastReward = todayKey(); p.coins += 150; Account.save(); Sfx.play('buy'); this.toast('🎁 +150 Kart Coins! Come back tomorrow for more.'); this.refreshTop(); };
     $('resOk').onclick = () => this.exitRace();
+    $('resNext').onclick = () => { const c = this.lastCfg; const k = TRACKS.findIndex(t => t.id === this.sel.track); this.sel.track = TRACKS[(k + 1) % TRACKS.length].id; if (Net.party) Net.setParty({ sel: this.sel }); this.exitRace(true); if (c && (!c.multi || Net.isLeader())) this.play(); };
     $('resAgain').onclick = () => { const c = this.lastCfg; this.exitRace(true); if (c && (!c.multi || Net.isLeader())) this.play(); };
     $('hPause').onclick = () => this.pauseMenu();
     { const lb = $('hLook'); const on = e => { e.preventDefault(); Input.touch.look = 1; lb.classList.add('on'); }; const off = () => { Input.touch.look = 0; lb.classList.remove('on'); };
@@ -183,6 +184,8 @@ const App = window.App = {
       <div class="set"><div><b>Gamertag</b><div class="muted">${esc(Account.profile.tag)}</div></div><button class="btn sm" id="chTag">Change</button></div>
       <div class="set"><div><b>Graphics</b><div class="muted">Low runs better on Chromebooks</div></div>${seg('quality', [['high', 'High'], ['low', 'Low']])}</div>
       <div class="set"><div><b>Bot difficulty</b></div>${seg('difficulty', [['easy', 'Easy'], ['normal', 'Normal'], ['hard', 'Hard']])}</div>
+      <div class="set"><div><b>Auto-accelerate</b><div class="muted">The kart drives forward by itself</div></div>${seg('autoGas', [[false, 'Off'], [true, 'On']])}</div>
+      <div class="set"><div><b>Steering assist</b><div class="muted">Nudges you away from the edges</div></div>${seg('assist', [[false, 'Off'], [true, 'On']])}</div>
       <div class="set"><div><b>Sound</b></div>${seg('muted', [[false, 'On'], [true, 'Off']])}</div>
       <div class="set"><div><b>Redeem code</b><div class="muted">Got a code? Enter it for rewards</div></div><button class="btn sm g" id="redeemBtn">Redeem</button></div>
       <div class="set"><div><b>Controls</b><div class="muted">Change any key. Gamepads and touch screens work too.</div></div><button class="btn sm b" id="keysBtn">Keybinds</button></div>
@@ -270,7 +273,7 @@ const App = window.App = {
   modeModal() {
     const inParty = Net.party && Net.members().length > 1;
     const b = this.modal(`<h3>Choose mode</h3><div class="opts" id="mOpts">${Object.values(MODES).map(m => `<button class="opt ${this.sel.mode === m.id ? 'on' : ''}" data-m="${m.id}" ${inParty && m.id === 'tt' ? 'disabled' : ''}><b>${m.icon} ${m.name}</b><span class="muted">${m.desc}${inParty && m.id === 'tt' ? ' (solo only)' : ''}</span></button>`).join('')}</div>
-      <h3 style="margin-top:18px">Choose track</h3><div class="opts" id="tOpts">${TRACKS.map(t => `<button class="opt ${this.sel.track === t.id ? 'on' : ''}" data-t="${t.id}"><div class="tm" style="background-image:url(${this.trackThumb(t.id)})"></div><b>${t.name}</b><span class="muted">${{ meadow: 'Grassy hills', desert: 'Sand & canyons', snow: 'Icy mountain pass', neon: 'Night city' }[t.theme]}${Account.profile.best[t.id] ? ' · best ' + fmtTime(Account.profile.best[t.id]) : ''}</span></button>`).join('')}</div>
+      <h3 style="margin-top:18px">Choose track</h3><div class="opts" id="tOpts">${TRACKS.map(t => `<button class="opt ${this.sel.track === t.id ? 'on' : ''}" data-t="${t.id}"><div class="tm" style="background-image:url(${this.trackThumb(t.id)})"></div><b>${t.name}</b><span class="muted">${{ beach: 'Sunny seaside', meadow: 'Grassy hills', desert: 'Sand & canyons', snow: 'Icy mountain pass', neon: 'Night city' }[t.theme]}${Account.profile.best[t.id] ? ' · best ' + fmtTime(Account.profile.best[t.id]) : ''}</span></button>`).join('')}</div>
       <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn y" id="mOk">Confirm</button></div>`, true);
     b.querySelectorAll('[data-m]').forEach(x => x.onclick = () => { this.sel.mode = x.dataset.m; b.querySelectorAll('[data-m]').forEach(y => y.classList.toggle('on', y === x)); });
     b.querySelectorAll('[data-t]').forEach(x => x.onclick = () => { this.sel.track = x.dataset.t; b.querySelectorAll('[data-t]').forEach(y => y.classList.toggle('on', y === x)); });
@@ -283,7 +286,7 @@ const App = window.App = {
     const s = this.sel; let mode = s.mode; if (multi && mode === 'tt') mode = 'gp';
     const seed = (Math.random() * 1e9) | 0; const r = rng(seed);
     const humans = multi ? Net.members().slice(0, 8).map(m => ({ id: m.peer, tag: m.sameTab ? Account.profile.tag : safeTag(m.presence.tag), cos: m.sameTab ? packCos(Account.profile.equip) : m.presence.cos })) : [{ id: 'me', tag: Account.profile.tag, cos: packCos(Account.profile.equip) }];
-    const nb = mode === 'tt' ? 0 : Math.max(0, 8 - humans.length);
+    const nb = mode === 'tt' ? 0 : Math.max(0, ((multi && Net.room) ? 8 : 12) - humans.length);
     const names = BOT_NAMES.slice().sort(() => r() - 0.5);
     const bots = [];
     for (let i = 0; i < nb; i++) {
@@ -328,7 +331,7 @@ const App = window.App = {
       rw.unlocked.map(u => `<div class="reward" style="background:rgba(194,92,255,.3)">🔓 Turbo Pass reward: ${esc(u)}</div>`).join('') +
       rw.challenges.map(c => `<div class="reward" style="background:rgba(47,191,74,.3)">✔ ${esc(c)}</div>`).join('');
     const memberOnly = res.party && Net.party && !Net.isLeader();
-    $('resAgain').classList.toggle('hidden', !!memberOnly);
+    $('resAgain').classList.toggle('hidden', !!memberOnly); $('resNext').classList.toggle('hidden', !!memberOnly);
     $('resOk').textContent = res.party ? 'Back to party' : 'Continue';
     $('results').classList.remove('hidden');
     $('touch').classList.add('hidden');

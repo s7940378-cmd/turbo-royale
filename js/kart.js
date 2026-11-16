@@ -25,6 +25,11 @@ const KartFactory = (() => {
     if (t === 'antenna') { g.cyl(0.02, 0.35, 4, GREY, 'y', 0, 1.9, z); g.sphere(0.07, 6, 4, hexc(0xff3030, 0.9), 0, 2.08, z); }
     if (t === 'antenna2') { for (const s of [-1, 1]) { g.push(M4.trs(s * 0.12, 1.85, z, 0, 0, -s * 0.35)); g.cyl(0.02, 0.35, 4, c, 'y', 0, 0, 0); g.sphere(0.07, 6, 4, hexc(0xfff04a, 0.8), 0, 0.2, 0); g.pop(); } }
     if (t === 'stem') { g.cyl(0.05, 0.18, 5, hexc(0x3f7d20), 'y', 0, 1.84, z); g.box(0.2, 0.03, 0.1, hexc(0x5fbf3f), 0.1, 1.86, z); }
+    if (t === 'halo') { for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; g.box(0.1, 0.05, 0.1, hexc(0xffe14a, 1), Math.cos(a) * 0.26, 1.98, z + Math.sin(a) * 0.26); } }
+    if (t === 'cap') { g.box(0.6, 0.12, 0.6, hexc(0xe8333a), 0, 1.76, z); g.box(0.5, 0.05, 0.3, hexc(0xe8333a), 0, 1.72, z + 0.4); }
+    if (t === 'band') { g.box(0.72, 0.1, 0.72, hexc(0xe8333a), 0, 1.58, z); g.box(0.08, 0.3, 0.05, hexc(0xe8333a), 0.2, 1.45, z - 0.38); }
+    if (t === 'star') { g.push(M4.trs(0, 1.98, z, 0, 0, Math.PI / 4)); g.box(0.3, 0.3, 0.08, hexc(0xfff27a, 1)); g.pop(); g.box(0.3, 0.3, 0.08, hexc(0xfff27a, 1), 0, 1.98, z); }
+    if (t === 'fin') { g.push(M4.trs(0, 1.72, z + 0.05, 0, 0, 0)); g.wedge(0.08, 0.4, 0.5, c, 0, 0, 0, 0); g.pop(); }
     if (t === 'mohawk') { for (let i = 0; i < 4; i++) g.box(0.07, 0.24 - i * 0.03, 0.12, hexc(0xff2bd6, 0.3), 0, 1.82 - i * 0.03, z + 0.18 - i * 0.14); }
   }
   function build(R, cos) {
@@ -240,7 +245,11 @@ class KartView {
     opts = opts || {};
     const bob = this.k.hover ? 0.35 + Math.sin(performance.now() / 180) * 0.06 : 0;
     const hop = opts.hop || 0;
-    M4.trs(x, y + bob + hop, z, yaw, pitch, roll, 1, this.bodyM.m);
+    M4.trs(x, y + bob + hop + (opts.jit || 0), z, yaw, pitch, roll + (opts.lean || 0), 1, this.bodyM.m);
+    if (opts.sq || opts.stz) { // squash & stretch about the ground
+      const m = this.bodyM.m, sq = opts.sq || 0, stz = opts.stz || 0, sy = 1 + sq - stz * 0.25, sx = 1 - sq * 0.5, sz = 1 - sq * 0.5 + stz;
+      m[0] *= sx; m[1] *= sx; m[2] *= sx; m[4] *= sy; m[5] *= sy; m[6] *= sy; m[8] *= sz; m[9] *= sz; m[10] *= sz;
+    }
     this.spin += speed * dt / this.k.wr;
     const tmp = new Float32Array(16);
     this.k.wheelPos.forEach((wp, i) => {
