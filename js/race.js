@@ -85,10 +85,11 @@ class Race {
     this.boxes = []; if (!this.items) return;
     const t = this.track;
     for (const fr of BOX_ROWS) {
-      const i = Math.floor(fr * t.N);
+      const i = Math.floor(fr * t.N), dbl = BOX_ROWS.indexOf(fr) % 2 === 1; // every other row is double boxes
       for (const lat of [-7.5, -2.5, 2.5, 7.5]) {
         const p = t.point(i, lat); const m = this.R.mesh(this.props.box, { tex: this.tex.box, alpha: 0.9, emis: 0.25, cull: 230 });
-        this.scene.meshes.push(m); this.boxes.push({ x: p[0], y: p[1] + 1.3, z: p[2], on: true, t: 0, m, ph: Math.random() * 6 });
+        this.scene.meshes.push(m); const bx = { x: p[0], y: p[1] + 1.3, z: p[2], on: true, t: 0, m, ph: Math.random() * 6, dbl }; this.boxes.push(bx);
+        if (dbl) { bx.m2 = this.R.mesh(this.props.box, { tex: this.tex.box, alpha: 0.9, emis: 0.35, cull: 230 }); this.scene.meshes.push(bx.m2); }
       }
     }
   }
@@ -124,7 +125,7 @@ class Race {
     this.patrols = (t.patrols || []).map(p0 => { const m = R.mesh(rgeo); this.scene.meshes.push(m); return Object.assign({}, p0, { m, x: 0, y: 0, z: 0 }); });
     this.ramps = t.ramps || [];
     // extra boxes on jump routes
-    for (const eb of t.extraBoxes || []) for (const lat of [-3, 3]) { const p = eb.b.point(eb.si, lat); const m = R.mesh(props.box, { tex: this.tex.box, alpha: 0.9, emis: 0.25 }); this.scene.meshes.push(m); if (this.items) this.boxes.push({ x: p[0], y: p[1] + 1.3, z: p[2], on: true, t: 0, m, ph: Math.random() * 6 }); else m.visible = false; }
+    for (const eb of t.extraBoxes || []) for (const lat of [-3, 3]) { const p = eb.b.point(eb.si, lat); const m = R.mesh(props.box, { tex: this.tex.box, alpha: 0.9, emis: 0.25 }); this.scene.meshes.push(m); if (this.items) { const m2 = R.mesh(props.box, { tex: this.tex.box, alpha: 0.9, emis: 0.35 }); this.scene.meshes.push(m2); this.boxes.push({ x: p[0], y: p[1] + 1.3, z: p[2], on: true, t: 0, m, m2, dbl: true, ph: Math.random() * 6 }); } else m.visible = false; }
     // decoy box mesh
     this.decoyGeo = props.box;
   }
@@ -167,6 +168,7 @@ class Race {
     if (r.rolling > 0) return;
     this.h.item.textContent = r.item ? ITEMS[r.item].icon : '';
     this.h.item.parentElement.classList.toggle('has', !!r.item);
+    { const h2 = document.getElementById('hItem2'); if (h2) { h2.textContent = r.item2 ? ITEMS[r.item2].icon : ''; h2.classList.toggle('has', !!r.item2); } }
     this.h.itemN.textContent = r.item === 'nitro3' ? '×' + r.itemN : r.item === 'gold' && r.goldT > 0 ? Math.ceil(r.goldT) + 's' : '';
   }
   // ---------- main update ----------
@@ -521,7 +523,7 @@ class Race {
         b.on = false; b.t = 3;
         this._burst(b.x, b.y, b.z, 18);
         if (r.local) { Sfx.play('box'); this.stats.box++; }
-        if (!r.item && r.rolling <= 0) this._roll(r);
+        if (r.rolling <= 0 && (!r.item || (b.dbl && !r.item2))) this._roll(r, b.dbl);
       }
     }
     for (const p of this.pads) {
@@ -539,7 +541,7 @@ class Race {
       cn.on = false; cn.t = 7; r.coins = Math.min(20, (r.coins || 0) + 1);
       for (let q = 0; q < 5; q++) this.fxAdd.emit(cn.x, cn.y, cn.z, (Math.random() - 0.5) * 4, 3 + Math.random() * 3, (Math.random() - 0.5) * 4, [1, 0.85, 0.3, 1], 0.5, 0.4, 0, 10);
       if (r.local) { Sfx.play('coin'); this.stats.coin = (this.stats.coin || 0) + 1; } }
-    if (r.item === 'gold' && !(r.goldT > 0) && r.goldUsed) { r.item = null; r.goldUsed = false; if (r.local) this.setItemUI(); }
+    if (r.item === 'gold' && !(r.goldT > 0) && r.goldUsed) { r.item = null; r.goldUsed = false; this._promote(r); }
     // explosive barrels
     for (const b of this.barrels) if (b.on && Math.hypot(b.x - r.x, b.z - r.z) < 2.1 && !(r.airY > 1.5)) this.explodeBarrel(b, true);
     // rolling hazards
@@ -556,18 +558,22 @@ class Race {
     // trail particles
     this._trails(r, dt);
   }
-  _roll(r) {
+  _promote(r) { if (!r.item && r.item2) { r.item = r.item2; r.item2 = null; r.itemN = r.item === 'nitro3' ? 3 : 1; r.goldUsed = false; r.itemT = 0.5 + this.rand() * 1.5; } if (r.local) this.setItemUI(); }
+  _roll(r, dbl) {
     const n = this.racers.filter(o => !o.elim).length;
     const posFrac = n > 1 ? (r.place - 1) / (n - 1) : 0;
     const lead = this.order && this.order.find(o => !o.elim);
     const gap = lead ? Math.max(0, lead.prog - r.prog) : 0;
     const seekerOK = !this.proj.some(p => p.sk) && lead && lead !== r && r.place > 2;
-    const it = rollItem(this.rand, posFrac, n >= 4 && r.place > n - 3, gap, seekerOK);
+    const roll = () => rollItem(this.rand, posFrac, n >= 4 && r.place > n - 3, gap, seekerOK);
+    if (r.item) { r.item2 = roll(); if (r.local) { Sfx.play('got'); this.setItemUI(); } return; } // already holding one: the double box fills the second slot
+    const it = roll(); const it2 = dbl && !r.item2 ? roll() : null;
+    if (!r.local && it2) r.item2 = it2;
     if (r.local) {
-      r.rolling = 1.3; r.item = null; r._rollTo = it;
+      r.rolling = 1.3; r.item = null; r._rollTo = it; r._rollTo2 = it2;
       const box = this.h.item.parentElement; box.classList.add('rolling'); const icons = Object.values(ITEMS).map(i => i.icon); let k = 0;
       const tick = setInterval(() => { this.h.item.textContent = icons[k++ % icons.length]; Sfx.play('tick'); }, 80);
-      setTimeout(() => { clearInterval(tick); box.classList.remove('rolling'); r.rolling = 0; r.item = r._rollTo; r.itemN = r.item === 'nitro3' ? 3 : 1; this.setItemUI(); Sfx.play('got'); }, 1300);
+      setTimeout(() => { clearInterval(tick); box.classList.remove('rolling'); r.rolling = 0; r.item = r._rollTo; r.itemN = r.item === 'nitro3' ? 3 : 1; if (r._rollTo2) { r.item2 = r._rollTo2; r._rollTo2 = null; } this.setItemUI(); Sfx.play('got'); }, 1300);
     } else { r.item = it; r.itemN = it === 'nitro3' ? 3 : 1; r.itemT = 0.8 + this.rand() * 2.5; }
   }
   useItem(r) {
@@ -598,7 +604,7 @@ class Race {
       const fx = { t: 's', owner: r.id, id: r.id + ':s' + Math.round(this.raceTime * 100), prog: r.prog };
       this._surge(fx); this.sendFx(fx);
     }
-    if (it === 'nitro3' && --r.itemN > 0) { } else { r.item = null; r.itemN = 0; }
+    if (it === 'nitro3' && --r.itemN > 0) { } else { r.item = null; r.itemN = 0; this._promote(r); }
     if (r.local) this.setItemUI();
   }
   _near(r) { return this.me && Math.hypot(this.me.x - r.x, this.me.z - r.z) < 60; }
@@ -804,7 +810,7 @@ class Race {
     const hue = this.t * 0.6;
     for (const b of this.boxes) {
       if (!b.on) { b.t -= dt; if (b.t <= 0) b.on = true; }
-      b.m.visible = b.on;
+      b.m.visible = b.on; if (b.m2) { b.m2.visible = b.on; if (b.on) { M4.trs(b.x, b.y + 0.75 + Math.sin(this.t * 2 + b.ph) * 0.25, b.z, -this.t * 1.6 + b.ph, 0.9, 0.6, 0.72, b.m2.m); b.m2.tint = [1, 0.85, 0.35]; } }
       if (b.on) { M4.trs(b.x, b.y + Math.sin(this.t * 2 + b.ph) * 0.25, b.z, this.t * 1.2 + b.ph, 0.5, 0.3, 1, b.m.m); b.m.tint = [0.75 + 0.25 * Math.sin(hue + b.ph), 0.75 + 0.25 * Math.sin(hue + 2 + b.ph), 0.75 + 0.25 * Math.sin(hue + 4 + b.ph)]; }
     }
   }

@@ -207,6 +207,7 @@ kbd{background:rgba(255,255,255,.15);border-radius:5px;padding:1px 6px;font-weig
 #vig{position:fixed;inset:0;z-index:3;pointer-events:none;background:radial-gradient(ellipse at 50% 50%,transparent 62%,rgba(5,8,30,.32) 100%)}
 .coinbox{display:flex;align-items:center;gap:6px}.coinbox.max{border-color:var(--yellow);color:var(--yellow)}
 #hud.podium>*:not(#hCenter){display:none!important}#hud.podium #hCenter{top:5%}#hud.podium #hMsg{font-size:clamp(30px,5.5vw,64px)}
+#hItem2{position:absolute;left:-58px;top:22px;width:50px;height:50px;border-radius:12px;background:rgba(5,10,40,.6);border:3px solid rgba(255,255,255,.25);display:grid;place-items:center;font-size:28px;font-family:system-ui;opacity:.45}#hItem2.has{opacity:1;border-color:var(--yellow)}
 #flash{position:fixed;inset:0;z-index:7;background:#bfe8ff;opacity:0;pointer-events:none;mix-blend-mode:screen}
 #touch{position:fixed;inset:auto 0 0 0;height:180px;z-index:8;pointer-events:none}
 #touch button{position:absolute;pointer-events:auto;width:84px;height:84px;border-radius:50%;background:rgba(255,255,255,.18);border:3px solid rgba(255,255,255,.35);font-size:30px;font-family:system-ui;touch-action:none}
@@ -296,7 +297,7 @@ kbd{background:rgba(255,255,255,.15);border-radius:5px;padding:1px 6px;font-weig
 <div id="hud" class="hidden">
   <div id="hTags"></div>
   <div id="hTopL"><div class="hbox"><small>LAP</small><span id="hLap">1/3</span></div><div class="hbox"><small>TIME</small><span id="hTime">0:00.00</span></div><div class="hbox coinbox"><span class="coin"></span><span id="hCoins">0</span><small style="margin-left:4px">/20</small></div><div id="hList"></div></div>
-  <div id="hItemBox"><span id="hItem"></span><span id="hItemN"></span><span id="hItemKey">E / Enter to use</span></div>
+  <div id="hItemBox"><span id="hItem"></span><span id="hItemN"></span><span id="hItemKey">E / Enter to use</span><span id="hItem2"></span></div>
   <div id="hKo" class="hidden"></div>
   <div class="pos" id="hPos">1</div>
   <button id="hPause" title="Menu (Esc)">⏸</button>
@@ -325,15 +326,15 @@ kbd{background:rgba(255,255,255,.15);border-radius:5px;padding:1px 6px;font-weig
 <div id="modal" class="modal hidden"><div class="mbox" id="mbox"></div></div>
 <div id="toasts"></div>
 
-<script src="js/engine.js?v=202611161359"></script>
-<script src="js/data.js?v=202611161359"></script>
-<script src="js/sys.js?v=202611161359"></script>
-<script src="js/kart.js?v=202611161359"></script>
-<script src="js/track.js?v=202611161359"></script>
-<script src="js/features.js?v=202611161359"></script>
-<script src="js/race.js?v=202611161359"></script>
-<script src="js/account.js?v=202611161359"></script>
-<script src="js/net.js?v=202611161359"></script>
-<script src="js/main.js?v=202611161359"></script>
+<script src="js/engine.js?v=202611161404"></script>
+<script src="js/data.js?v=202611161404"></script>
+<script src="js/sys.js?v=202611161404"></script>
+<script src="js/kart.js?v=202611161404"></script>
+<script src="js/track.js?v=202611161404"></script>
+<script src="js/features.js?v=202611161404"></script>
+<script src="js/race.js?v=202611161404"></script>
+<script src="js/account.js?v=202611161404"></script>
+<script src="js/net.js?v=202611161404"></script>
+<script src="js/main.js?v=202611161404"></script>
 </body>
 </html>
