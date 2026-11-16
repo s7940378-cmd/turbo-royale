@@ -267,8 +267,9 @@ const App = window.App = {
     $('modeName').textContent = m.name; $('modeSub').textContent = (Net.party && !Net.isLeader()) ? 'Leader picked' : 'Tap to change mode'; $('modeTrack').textContent = t.name;
     $('modeImg').style.backgroundImage = `url(${this.trackThumb(t.id)})`;
     const member = Net.party && !Net.isLeader() && Net.members().length > 1;
-    $('playBtn').textContent = member ? (Net.ready ? 'Not ready' : 'Ready up') : 'Play';
-    $('playBtn').className = 'btn ' + (member && Net.ready ? 'r' : 'y');
+    const others = Net.party && Net.isLeader() ? Net.members().filter(m => !m.sameTab) : [], notReady = others.filter(m => !m.presence.ready).length;
+    $('playBtn').textContent = member ? (Net.ready ? 'Not ready' : 'Ready up') : notReady ? `Waiting ${others.length - notReady}/${others.length} ready` : 'Play';
+    $('playBtn').className = 'btn ' + (member && Net.ready ? 'r' : 'y'); $('playBtn').style.fontSize = notReady ? '22px' : ''; $('playBtn').style.opacity = notReady ? 0.6 : 1;
     $('modeCard').disabled = !!member;
     this.refreshTop();
   },
@@ -285,6 +286,7 @@ const App = window.App = {
     Sfx.init(); Sfx.play('click');
     const multi = Net.party && Net.members().length > 1;
     if (multi && !Net.isLeader()) { Net.ready = !Net.ready; Net.setParty({ ready: Net.ready }); this.renderPlay(); return; }
+    if (multi) { const nr = Net.members().filter(m => !m.sameTab && !m.presence.ready); if (nr.length) { this.toast('Everyone has to ready up first. Waiting for: <b>' + nr.map(m => esc(safeTag(m.presence.tag))).join(', ') + '</b>'); return; } }
     const s = this.sel; let mode = s.mode; if (multi && mode === 'tt') mode = 'gp';
     const seed = (Math.random() * 1e9) | 0; const r = rng(seed);
     const humans = multi ? Net.members().slice(0, 8).map(m => ({ id: m.peer, tag: m.sameTab ? Account.profile.tag : safeTag(m.presence.tag), cos: m.sameTab ? packCos(Account.profile.equip) : m.presence.cos })) : [{ id: 'me', tag: Account.profile.tag, cos: packCos(Account.profile.equip) }];
@@ -407,7 +409,7 @@ const App = window.App = {
       el.innerHTML = `<div class="row" style="justify-content:space-between"><div><div class="muted">Party code</div><div class="code">${esc(Net.code)}</div></div><button class="btn sm" id="cpCode">Copy code</button></div>
         <button class="btn b" style="width:100%;margin-top:8px" id="cpLink">🔗 Copy invite link</button>
         <div class="sep"></div>${mem.map(m => `<div class="mem"><div class="av" style="background:${m.sameTab ? '#ffc928;color:#2a1a00' : '#2a7fff'}">${m === lead ? '👑' : esc(safeTag(m.presence.tag)[0])}</div><div class="nm">${esc(m.sameTab ? Account.profile.tag : safeTag(m.presence.tag))}${m.sameTab ? ' (you)' : ''}</div><div class="st ${m === lead || m.presence.ready ? 'rdy' : ''}">${m === lead ? 'LEADER' : m.presence.race && m.presence.k ? 'RACING' : m.presence.ready ? 'READY' : 'NOT READY'}</div></div>`).join('')}
-        <p class="muted" style="margin:6px 0">${mem.length}/8 · ${Net.isLeader() ? (mem.length > 1 ? 'You pick the mode and start the race. Up to 8 racers. Bots fill empty spots unless 4 or more players are in the party.' : 'Waiting for friends — send them the invite link. You can still race solo.') : 'Waiting for the leader to start.'}</p>
+        <p class="muted" style="margin:6px 0">${mem.length}/8 · ${Net.isLeader() ? (mem.length > 1 ? 'You pick the mode and start the race once everyone is ready. Up to 8 racers. Bots fill empty spots unless 4 or more players are in the party.' : 'Waiting for friends — send them the invite link. You can still race solo.') : 'Waiting for the leader to start.'}</p>
         <button class="btn sm r" id="lvParty">Leave party</button>`;
       $('lvParty').onclick = () => { Net.leaveParty(); this.sessionPts = 0; this.sessionWins = 0; this.toast('Left the party'); this.lobbyKarts(); this.renderPlay(); };
       const copy = (txt, ok) => { const done = () => this.toast(ok); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(done, () => this.modal(`<h3>Copy this</h3><input class="inp" style="width:100%;letter-spacing:0;text-transform:none" value="${esc(txt)}" onfocus="this.select()"><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn y" onclick="App.closeModal()">Done</button></div>`)); };
