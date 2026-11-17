@@ -179,9 +179,11 @@ class Race {
     if (this.podium) { this._podiumUpdate(dt); return; }
     const ctl = Input.read();
     if (this.app.settings.autoGas && !ctl.brake) ctl.gas = 1;
-    if (this.state === 'intro') { this.introT -= dt; if (this.introT <= 0 || ctl.gas && this.t > 0.6) { this.state = 'count'; } }
+    // party races: GO happens at the same moment on every device (leader's clock), however fast each one loaded
+    const goAt = this.opts.goAt && this.opts.net ? (this.opts.goAt - this.opts.net.leaderNow()) / 1000 : null;
+    if (this.state === 'intro') { this.introT -= dt; if (goAt !== null ? goAt <= 3.0 : (this.introT <= 0 || ctl.gas && this.t > 0.6)) { this.state = 'count'; } }
     else if (this.state === 'count') {
-      this.count -= dt; const c = Math.ceil(this.count - 0.6);
+      if (goAt !== null) this.count = Math.min(this.count, goAt + 0.6); else this.count -= dt; const c = Math.ceil(this.count - 0.6);
       if (this._lu && this.count < 2.6) { this._lu.classList.add('hidden'); this._lu = null; }
       if (c !== this.lastCount && c >= 1 && c <= 3) { this.lastCount = c; this.msg(String(c), ''); Sfx.play('beep'); }
       if (ctl.gas && this.count < 1.3 && this.count > 0.6 && this.me) this.me._rs = true;
@@ -891,7 +893,7 @@ class Race {
     if (!r || r.elim) { const alive = this.order.filter(o => !o.elim); r = alive[0] || this.me; this.spectate = r; } else this.spectate = null;
     if (!r) return;
     if (this.state === 'intro') {
-      const a = this.t * 0.6 + r.yaw + 2.2, d = 18 - this.t * 3;
+      const a = this.t * 0.6 + r.yaw + 2.2, d = Math.max(7, 18 - this.t * 3);
       c.x = r.x + Math.sin(a) * d; c.z = r.z + Math.cos(a) * d; c.y = r.y + 5 + this.introT * 2; c.tx = r.x; c.ty = r.y + 1; c.tz = r.z; c.fov = 1.1;
       this.camYaw = r.yaw;
     } else if (r === this.me && r.finished && !r.elim) { // victory orbit

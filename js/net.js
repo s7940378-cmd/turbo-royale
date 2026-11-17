@@ -130,7 +130,7 @@ const Net = {
     if (!o || typeof o !== 'object') return;
     if (o.bye) { if (this.pres.delete(id)) { this.seen.delete(id); this._rebuild(); this._checkLeader(); } return; }
     if (o.hello) { this._beat(true); return; }
-    if (o.p && typeof o.p === 'object' && msg.length < 12000) { this.pres.set(id, o.p); this.seen.set(id, Date.now()); this._rebuild(); }
+    if (o.p && typeof o.p === 'object' && msg.length < 12000) { if (o.p.host) this._clk(o.ck); this.pres.set(id, o.p); this.seen.set(id, Date.now()); this._rebuild(); }
   },
   _beat(force) {
     if (!this.cli) return;
@@ -145,13 +145,13 @@ const Net = {
     if (!this.cli || !this.cli.open) return;
     if (this.cli.backlog > 64000) return; // slow connection: skip a frame rather than pile up
     this._lastPub = Date.now();
-    this.cli.pub(TOPIC + this.code + '/' + this.myPeer, JSON.stringify({ p: this.mine }));
+    this.cli.pub(TOPIC + this.code + '/' + this.myPeer, JSON.stringify({ p: this.mine, ck: Date.now() }));
   },
   _lost(msg) { const was = this.code; this._reset(); if (was) this.emit('lost', msg); this.emit('party'); },
   _reset() {
     clearInterval(this._hb); clearTimeout(this._pend); this._pend = 0;
     if (this.cli) { const c = this.cli; this.cli = null; try { if (this.code && this.myPeer) c.pub(TOPIC + this.code + '/' + this.myPeer, '{"bye":1}'); } catch (e) { } setTimeout(() => c.close(), 100); }
-    this.pres.clear(); this.seen.clear(); this.mine = {}; this.code = null; this.isHost = false; this.myPeer = null; this.partyPeers = []; this.ready = false; this._lastRid = null; this.fxOut = [];
+    this.pres.clear(); this.seen.clear(); this.mine = {}; this.code = null; this.isHost = false; this.myPeer = null; this.partyPeers = []; this.ready = false; this._lastRid = null; this.fxOut = []; this._ckS = []; this.clockOff = 0;
   },
   async leaveParty(quiet) { if (!this.code && !this.cli) return; this._reset(); if (!quiet) this.emit('party'); },
   setParty(extra) {
@@ -175,6 +175,9 @@ const Net = {
   members() { return this.partyPeers.slice().sort((a, b) => ((b.presence.host | 0) - (a.presence.host | 0)) || (a.presence.jt - b.presence.jt) || (a.peer < b.peer ? -1 : 1)).slice(0, 8); },
   leader() { if (!this.code) return null; return this.members().find(p => p.presence.host) || null; },
   isLeader() { return !this.party || this.isHost; },
+  // ----- shared clock: estimate the party leader's clock so every device starts the countdown together -----
+  _clk(ck) { if (typeof ck !== 'number' || !isFinite(ck)) return; const s = ck - Date.now(); const a = this._ckS || (this._ckS = []); a.push(s); if (a.length > 24) a.shift(); this.clockOff = Math.max(...a); },
+  leaderNow() { return Date.now() + (this.isLeader() ? 0 : (this.clockOff || 0)); },
   // ----- race sync -----
   startRace(cfg) { this.raceCfg = cfg; this.fxOut = []; this.setParty({ race: cfg, k: null, b: null, fx: null }); },
   endRace() { this.raceCfg = null; this.fxOut = []; this.setParty({ race: null, k: null, b: null, fx: null, ready: false }); },
@@ -182,7 +185,7 @@ const Net = {
     const L = this.leader();
     if (L && !L.sameTab) {
       const cfg = L.presence.race;
-      if (cfg && cfg.rid && cfg.rid !== this._lastRid && Array.isArray(cfg.roster) && cfg.roster.some(r => r.id === this.myPeer) && (!window.App || !App.race || App.race.opts.rid !== cfg.rid)) { this._lastRid = cfg.rid; this.emit('race', cfg); }
+      if (cfg && cfg.rid && cfg.rid !== this._lastRid && Array.isArray(cfg.roster) && cfg.roster.some(r => r.id === this.myPeer) && (!window.App || !App.race || App.race.opts.rid !== cfg.rid)) { this._lastRid = cfg.rid; if (cfg.ck) this._clk(cfg.ck); this.emit('race', cfg); }
     }
     if (window.App && App.race && App.race.net === this) this._apply(App.race);
   },

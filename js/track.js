@@ -220,7 +220,7 @@ class Track {
     while (placed < count && tries < count * 8) {
       tries++;
       const x = lerp(B.minx - 180, B.maxx + 180, r()), z = lerp(B.minz - 180, B.maxz + 180, r());
-      const d = this.distAt(x, z); if (d < this.wallD + 5) continue;
+      if (this.distAt(x, z) < this.wallD + 2) continue; const d = this.terrainBase(x, z)[0]; if (d < this.wallD + 6) continue; // exact distance to the main road AND every shortcut/jump path, so nothing is placed on a path
       if (T.props === 'city' && d > this.wallD + 90) continue;
       const y = this.groundHeight(x, z) - 0.2; const s = 0.8 + r() * 0.9;
       g.push(M4.trs(x, y, z, r() * 6.28, 0, 0, s));

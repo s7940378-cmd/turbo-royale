@@ -1,6 +1,7 @@
 // Turbo Royale — app shell: lobby, locker, shop, pass, challenges, parties, races
 'use strict';
 const $ = s => document.getElementById(s);
+const LOCKER_SORTS = [{ id: 'rarity', name: 'Rarity ↓' }, { id: 'rarityLow', name: 'Rarity ↑' }, { id: 'az', name: 'A–Z' }, { id: 'za', name: 'Z–A' }, { id: 'newest', name: 'Newest' }, { id: 'oldest', name: 'Oldest' }, { id: 'stats', name: 'Best stats', stats: true }];
 const App = window.App = {
   settings: Object.assign({ quality: 'high', difficulty: 'normal', muted: false, autoGas: false, assist: false }, (() => { try { return JSON.parse(localStorage.getItem('tr_settings') || '{}'); } catch (e) { return {}; } })()),
   sel: { mode: 'gp', track: 'sunny' }, tab: 'play', race: null, paused: false, slot: 'body',
@@ -379,6 +380,7 @@ const App = window.App = {
       bots.push({ id: 'b' + i, lvl: 1 + Math.floor(r() * r() * 90), name: names[i % names.length], cos: packCos(cos), skill: +(0.9 + r() * 0.1).toFixed(3) });
     }
     const cfg = { rid: 'r' + Date.now().toString(36), track: s.track, mode, seed, roster: humans, bots, hostPeer: multi ? Net.myPeer : 'me', multi: !!multi };
+    if (multi) { cfg.goAt = Net.leaderNow() + 7000; cfg.ck = Date.now(); } // shared start time: everyone's countdown hits GO together
     if (multi) Net.startRace(cfg);
     this.startRace(cfg, true);
   },
@@ -600,7 +602,7 @@ const App = window.App = {
     [{ id: 'presets', name: '★ Presets' }, ...SLOTS].forEach(s => { const b = document.createElement('button'); b.className = 'chip' + (this.slot === s.id ? ' on' : ''); b.textContent = s.name; b.onclick = () => { this.slot = s.id; this.editPreset = null; this.renderLocker(); }; tabs.appendChild(b); });
     if (this.slot === 'presets') { this.renderPresets(); return; }
     const p = Account.profile; const grid = document.createElement('div'); grid.className = 'grid';
-    const owned = CATALOG.filter(i => i.slot === this.slot && Account.owns(i.id));
+    const owned = this.sortItems(CATALOG.filter(i => i.slot === this.slot && Account.owns(i.id)));
     owned.forEach(it => grid.appendChild(this.itemCard(it.id, { sel: p.equip[this.slot] === it.id, onclick: () => {
       p.equip[this.slot] = it.id; Account.save(); Sfx.play('click'); if (it.slot === 'horn') Sfx.play('horn', it.kind);
       this.lobbyKarts(); this.renderLocker(); Net.setParty();
@@ -614,8 +616,22 @@ const App = window.App = {
     const tot = document.createElement('div'); tot.innerHTML = `<div class="muted" style="margin:10px 0 4px;font-weight:900;font-size:12px;letter-spacing:.5px">YOUR LOADOUT (KART × WHEELS × ENGINE)</div>${this.statBars(kartStats(p.equip).s)}${kartStats(p.equip).offroad ? '<div class="muted" style="margin-top:4px">✔ Off-road ready — loses much less speed on grass</div>' : ''}`;
     hdr.appendChild(tot);
     if (this.slot === 'banner' || this.slot === 'title') { tot.innerHTML = `<div class="muted" style="margin:10px 0 6px;font-weight:900;font-size:12px;letter-spacing:.5px">YOUR PLAYER CARD</div>${this.myCard(true)}<div class="muted" style="margin-top:6px">Shown to everyone in your party, on the starting grid and in the results. Get more banners and titles in the Item Shop and Turbo Pass.</div>`; }
-    body.appendChild(hdr); body.appendChild(grid);
+    // sort bar
+    const sb = document.createElement('div'); sb.className = 'lsort';
+    sb.innerHTML = `<span>Sort by</span>` + LOCKER_SORTS.filter(o => !o.stats || ['body', 'wheels', 'engine'].includes(this.slot)).map(o => `<button class="chip ${this.lockerSort() === o.id ? 'on' : ''}" data-s="${o.id}">${o.name}</button>`).join('') + `<span class="muted" style="margin-left:auto">${owned.length} owned</span>`;
+    sb.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { Account.profile.lockerSort = b.dataset.s; Account.save(); Sfx.play('click'); this.renderLocker(); });
+    body.appendChild(hdr); body.appendChild(sb); body.appendChild(grid);
     if (locked) { const m = document.createElement('p'); m.className = 'muted'; m.style.marginTop = '14px'; m.textContent = `${locked} more ${SLOTS.find(s => s.id === this.slot).name.toLowerCase()} item${locked > 1 ? 's' : ''} to unlock in the Item Shop and Turbo Pass.`; body.appendChild(m); }
+  },
+  lockerSort() { const v = Account.profile.lockerSort; return LOCKER_SORTS.some(o => o.id === v) ? v : 'rarity'; },
+  sortItems(list) {
+    const p = Account.profile, mode = this.lockerSort(), RK = Object.keys(RARITY), rk = it => RK.indexOf(it.rarity) + (it.ex ? 1 : 0);
+    const got = it => { const i = (p.owned || []).lastIndexOf(it.id); return i < 0 ? -1 : i; }; // position in the owned list = when you got it (starter items count as oldest)
+    const pw = it => it.stats ? it.stats.reduce((a, b) => a + b, 0) : 4;
+    const name = (a, b) => a.name.localeCompare(b.name);
+    const cmp = { rarity: (a, b) => rk(b) - rk(a) || pw(b) - pw(a) || name(a, b), rarityLow: (a, b) => rk(a) - rk(b) || name(a, b), az: name, za: (a, b) => name(b, a), newest: (a, b) => got(b) - got(a) || name(a, b), oldest: (a, b) => got(a) - got(b) || name(a, b), stats: (a, b) => pw(b) - pw(a) || name(a, b) }[mode];
+    const eq = p.equip[this.slot];
+    return list.slice().sort((a, b) => (b.id === eq) - (a.id === eq) || cmp(a, b)); // what you have equipped always stays first
   },
   // ---------------- presets ----------------
   presets() {

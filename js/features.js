@@ -167,17 +167,10 @@ Track.prototype.buildFeatures = function (R, quality) {
       const A = [a[0], a[1] - 0.3, a[2]], B = [c2[0], c2[1] - 0.3, c2[2]], C = [c2[0], c2[1] + wh, c2[2]], D = [a[0], a[1] + wh, a[2]];
       const cc = wcol[Math.floor(i / 3) % 2]; if (sd > 0) wg.quad(A, B, C, D, cc); else wg.quad(B, A, D, C, cc);
     }
-    if (type === 'tunnel') { // roof + glowing ring lights
-      for (let i = 0; i < b.N - 1; i++) {
-        const mid = b.point(i, 0); if (this.inMainCorridor(mid[0], mid[2], -4)) continue;
-        const A = b.point(i, -b.wallD), B2 = b.point(i, b.wallD), C = b.point(i + 1, b.wallD), D = b.point(i + 1, -b.wallD);
-        [A, B2, C, D].forEach(p => p[1] += wh);
-        wg.quad(D, C, B2, A, T.neon ? hexc(0x1a1030) : hexc(0x6b5038));
-        if (i % 6 === 0) { const L = b.point(i, 0);
-          wg.push(M4.trs(L[0], L[1] + wh - 0.3, L[2], b.heading(i) + Math.PI / 2, 0, 0)); wg.box(0.25, 0.25, b.wallD * 2, T.neon ? hexc(0xff2bd6, 1) : hexc(0xffe9a8, 1)); wg.pop(); }
-      }
-      // rock mound over the tunnel (not in neon)
-      if (!T.neon) for (let i = 4; i < b.N - 4; i += 5) { const p = b.point(i, 0); if (this.inMainCorridor(p[0], p[2], -6)) continue; wg.sphere(b.wallD + 2.5, 7, 4, mixc(hexc(T.hill), hexc(0x8a6a4a), 0.4), p[0], p[1] + wh - 1, p[2], 0.55); }
+    if (type === 'tunnel') { // open-top rock canyon: tall walls, light arches overhead and boulders outside (no roof, so you can always see the road)
+      for (let i = 0; i < b.N - 1; i += 6) { const mid = b.point(i, 0); if (this.inMainCorridor(mid[0], mid[2], -4)) continue;
+        const L = b.point(i, 0); wg.push(M4.trs(L[0], L[1] + wh + 0.2, L[2], b.heading(i) + Math.PI / 2, 0, 0)); wg.box(0.3, 0.3, b.wallD * 2 + 0.6, T.neon ? hexc(0xff2bd6, 1) : hexc(0xffe9a8, 1)); wg.pop(); }
+      if (!T.neon) for (let i = 2; i < b.N - 2; i += 4) for (const sd of [-1, 1]) { const p = b.point(i, sd * (b.wallD + 2.2)); if (this.inMainCorridor(p[0], p[2], 2) || this.inBranchCorridor(p[0], p[2], b, 1)) continue; wg.sphere(2.2 + ((i * 7) % 5) * 0.35, 7, 4, mixc(hexc(T.hill), hexc(0x8a6a4a), 0.4), p[0], p[1] + wh * 0.55, p[2], 0.9); }
     }
     meshes.push(R.mesh(R.upload(wg), { twoSided: true }));
     // entry sign
