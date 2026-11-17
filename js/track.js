@@ -224,6 +224,64 @@ class Track {
       if (T.props === 'city' && d > this.wallD + 90) continue;
       const y = this.groundHeight(x, z) - 0.2; const s = 0.8 + r() * 0.9;
       g.push(M4.trs(x, y, z, r() * 6.28, 0, 0, s));
+      this._prop(g, T, r);
+      g.pop(); placed++;
+    }
+    // trackside decorations: tire stacks / light posts
+    for (let i = 0; i < this.N; i += 18) {
+      for (const side of [-1, 1]) {
+        const o = side * (this.wallD + 2.5); const x = this.px[i] - this.tz[i] * o, z = this.pz[i] + this.tx[i] * o, y = this.py[i];
+        if (T.neon) { if ((i / 18) % 2 === 0) { g.cyl(0.15, 7, 5, hexc(0x333344), 'y', x, y + 3.5, z); g.sphere(0.5, 6, 4, hexc(side > 0 ? 0x2bf0ff : 0xff2bd6, 1), x, y + 7.2, z); } }
+        else if ((i / 18) % 3 === 0) { for (let k = 0; k < 3; k++) g.cyl(0.7, 0.45, 8, hexc(k % 2 ? 0x222222 : 0x2a2a2a), 'y', x, y + 0.25 + k * 0.45, z); }
+        else if ((i / 18) % 3 === 1 && this.def.theme === 'meadow') { g.box(0.2, 1.4, 0.2, hexc(0xffffff), x, y + 0.7, z); g.box(2.8, 1.1, 0.12, hexc([0xff3b3b, 0x2a7fff, 0xffd23a][i % 3]), x, y + 1.6, z); }
+      }
+    }
+    // corner chevron boards on the outside of bends
+    for (let i = 0; i < this.N; i += 7) {
+      const turn = this.curv[i]; if (Math.abs(turn) < 0.2) continue;
+      const out = turn > 0 ? 1 : -1, o = out * (this.wallD + 0.9); const x = this.px[i] - this.tz[i] * o, z = this.pz[i] + this.tx[i] * o;
+      if (this.branches && this.branches.length && this.inBranchCorridor(x, z, null, -3)) continue;
+      g.push(M4.trs(x, this.py[i], z, this.heading(i), 0, 0));
+      g.box(0.3, 2.0, 5.2, hexc(0x1d1d22), 0, 2.4, 0);
+      for (let k = -1; k <= 1; k++) g.box(0.34, 1.1, 0.9, hexc((Math.floor(i / 7) + k) % 2 ? 0xffd23a : 0xff5a1f, 0.75), 0, 2.4, k * 1.6);
+      g.box(0.2, 1.4, 0.2, hexc(0x333344), 0, 0.7, -2); g.box(0.2, 1.4, 0.2, hexc(0x333344), 0, 0.7, 2);
+      g.pop();
+    }
+    // grandstands with a crowd, flags and balloons by the start line
+    { const cols = [0xff5a5a, 0x2a7fff, 0xffd23a, 0x5fe06f, 0xff7ac8, 0xffffff, 0xff9f2e];
+      for (const side of [-1, 1]) for (const i0 of [10, -34]) {
+        const i = this.wrap(i0), o = side * (this.wallD + 7); const x = this.px[i] - this.tz[i] * o, z = this.pz[i] + this.tx[i] * o;
+        if (this.branches && this.inBranchCorridor(x, z, null, -8)) continue;
+        g.push(M4.trs(x, this.py[i] - 0.2, z, this.heading(i) + (side > 0 ? Math.PI : 0), 0, 0));
+        for (let st = 0; st < 4; st++) { g.box(2.2, 1 + st * 1.1, 22, hexc(T.neon ? 0x2a2350 : 0xdfe6ee), -st * 2.2, (1 + st * 1.1) / 2, 0);
+          for (let k = 0; k < 14; k++) { const cz = -10 + k * 1.5 + r() * 0.4; const cc = hexc(cols[r() * cols.length | 0], T.neon ? 0.5 : 0); g.box(0.6, 0.9, 0.6, cc, -st * 2.2, 1 + st * 1.1 + 0.45, cz); g.sphere(0.28, 5, 3, hexc(0xf2c9a0), -st * 2.2, 1 + st * 1.1 + 1.15, cz); } }
+        g.box(9.5, 0.3, 23, hexc(T.wall[0], T.neon ? 0.6 : 0), -3.3, 7.2, 0); for (const zz of [-11, 11]) g.box(0.3, 7.2, 0.3, hexc(0x8a9099), 0.8, 3.6, zz);
+        g.pop();
+      }
+      for (let i = 20; i < this.N; i += 46) for (const side of [-1, 1]) { // flag poles
+        const o = side * (this.wallD + 1.6); const x = this.px[i] - this.tz[i] * o, z = this.pz[i] + this.tx[i] * o; if (this.branches && this.inBranchCorridor(x, z, null, -3)) continue;
+        g.push(M4.trs(x, this.py[i], z, this.heading(i), 0, 0)); g.cyl(0.08, 6, 4, hexc(0xdfe6ee), 'y', 0, 3, 0); g.box(0.06, 1.1, 1.8, hexc(cols[(i / 46 | 0) % cols.length], T.neon ? 0.7 : 0.1), 0, 5.3, 0.95); g.pop(); }
+      if (!T.neon) for (let k = 0; k < 6; k++) { // hot-air balloons
+        const x = lerp(B.minx - 60, B.maxx + 60, r()), z = lerp(B.minz - 60, B.maxz + 60, r()), y = 70 + r() * 70, c1 = hexc(cols[r() * cols.length | 0], 0.25), c2 = hexc(cols[r() * cols.length | 0], 0.25);
+        g.sphere(9, 10, 7, c1, x, y, z, 1.15); g.cyl(9.05, 3, 10, c2, 'y', x, y, z); g.cyl(1.6, 7, 8, c1, 'y', x, y - 10, z, c1, 6.5); g.box(2.4, 2, 2.4, hexc(0x8a5f36), x, y - 14, z); }
+    }
+    // meme maps: giant landmarks you can see from the track
+    if (this.def.meme) {
+      const cx = (B.minx + B.maxx) / 2, cz = (B.minz + B.maxz) / 2, R2 = Math.max(B.maxx - B.minx, B.maxz - B.minz) / 2 + 70;
+      for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2 + 0.3; let x = cx + Math.cos(a) * R2, z = cz + Math.sin(a) * R2; if (this.distAt(x, z) < this.wallD + 30) continue; const y = this.groundHeight(x, z) - 0.5;
+        g.push(M4.trs(x, y, z, Math.atan2(cx - x, cz - z), 0, 0, 1));
+        this._landmark(g, T, k);
+        g.pop(); }
+    }
+    // distant mountains ring (not in city)
+    if (T.props !== 'city') {
+      const cx = (B.minx + B.maxx) / 2, cz = (B.minz + B.maxz) / 2, rad = Math.max(B.maxx - B.minx, B.maxz - B.minz) / 2 + 420;
+      for (let k = 0; k < 24; k++) { const a = k / 24 * Math.PI * 2 + r() * 0.2; const hh = 90 + r() * 120; const mc = T.mtn ? hexc(T.mtn) : T.props === 'cactus' ? hexc(0xc77a45) : T.props === 'pines' ? hexc(0x8ea4c0) : hexc(0x5a8a5a); g.cone(120 + r() * 60, hh, 6, mc, cx + Math.cos(a) * rad, -20, cz + Math.sin(a) * rad); if (!T.noCap) g.cone(40, hh * 0.25, 6, hexc(0xffffff), cx + Math.cos(a) * rad, hh * 0.75 - 20, cz + Math.sin(a) * rad); }
+    }
+    return g;
+  }
+  // one scenery prop for the theme, drawn at the origin of the current transform (also used by the lobby)
+  _prop(g, T, r) {
       if (T.props === 'trees') {
         if (r() < 0.75) { g.cyl(0.45, 3, 6, hexc(0x7a4f2a), 'y', 0, 1.5, 0); const leaf = mixc(hexc(0x2f9e3a), hexc(0x6ccf3a), r()); g.sphere(2.4, 7, 5, leaf, 0, 4.4, 0); g.sphere(1.7, 6, 4, shade(leaf, 1.1), 0.9, 5.6, 0.4); }
         else { const fl = [0xff5a7a, 0xffe14a, 0xffffff, 0xb57bff][r() * 4 | 0]; for (let k = 0; k < 5; k++) { const a = r() * 6.28, rr = r() * 2; g.cyl(0.05, 0.6, 3, hexc(0x2f8a2a), 'y', Math.cos(a) * rr, 0.3, Math.sin(a) * rr); g.sphere(0.25, 5, 3, hexc(fl), Math.cos(a) * rr, 0.7, Math.sin(a) * rr); } }
@@ -280,62 +338,11 @@ class Track {
         for (let yy = 3; yy < hgt - 2; yy += 3.2) { for (const sx of [-1, 1]) { g.box(wd * 0.7, 0.6, 0.05, wc, 0, yy, sx * (wd / 2 + 0.03)); g.box(0.05, 0.6, wd * 0.7, wc, sx * (wd / 2 + 0.03), yy, 0); } }
         g.box(wd + 0.4, 0.4, wd + 0.4, wc, 0, hgt, 0);
       }
-      g.pop(); placed++;
-    }
-    // trackside decorations: tire stacks / light posts
-    for (let i = 0; i < this.N; i += 18) {
-      for (const side of [-1, 1]) {
-        const o = side * (this.wallD + 2.5); const x = this.px[i] - this.tz[i] * o, z = this.pz[i] + this.tx[i] * o, y = this.py[i];
-        if (T.neon) { if ((i / 18) % 2 === 0) { g.cyl(0.15, 7, 5, hexc(0x333344), 'y', x, y + 3.5, z); g.sphere(0.5, 6, 4, hexc(side > 0 ? 0x2bf0ff : 0xff2bd6, 1), x, y + 7.2, z); } }
-        else if ((i / 18) % 3 === 0) { for (let k = 0; k < 3; k++) g.cyl(0.7, 0.45, 8, hexc(k % 2 ? 0x222222 : 0x2a2a2a), 'y', x, y + 0.25 + k * 0.45, z); }
-        else if ((i / 18) % 3 === 1 && this.def.theme === 'meadow') { g.box(0.2, 1.4, 0.2, hexc(0xffffff), x, y + 0.7, z); g.box(2.8, 1.1, 0.12, hexc([0xff3b3b, 0x2a7fff, 0xffd23a][i % 3]), x, y + 1.6, z); }
-      }
-    }
-    // corner chevron boards on the outside of bends
-    for (let i = 0; i < this.N; i += 7) {
-      const turn = this.curv[i]; if (Math.abs(turn) < 0.2) continue;
-      const out = turn > 0 ? 1 : -1, o = out * (this.wallD + 0.9); const x = this.px[i] - this.tz[i] * o, z = this.pz[i] + this.tx[i] * o;
-      if (this.branches && this.branches.length && this.inBranchCorridor(x, z, null, -3)) continue;
-      g.push(M4.trs(x, this.py[i], z, this.heading(i), 0, 0));
-      g.box(0.3, 2.0, 5.2, hexc(0x1d1d22), 0, 2.4, 0);
-      for (let k = -1; k <= 1; k++) g.box(0.34, 1.1, 0.9, hexc((Math.floor(i / 7) + k) % 2 ? 0xffd23a : 0xff5a1f, 0.75), 0, 2.4, k * 1.6);
-      g.box(0.2, 1.4, 0.2, hexc(0x333344), 0, 0.7, -2); g.box(0.2, 1.4, 0.2, hexc(0x333344), 0, 0.7, 2);
-      g.pop();
-    }
-    // grandstands with a crowd, flags and balloons by the start line
-    { const cols = [0xff5a5a, 0x2a7fff, 0xffd23a, 0x5fe06f, 0xff7ac8, 0xffffff, 0xff9f2e];
-      for (const side of [-1, 1]) for (const i0 of [10, -34]) {
-        const i = this.wrap(i0), o = side * (this.wallD + 7); const x = this.px[i] - this.tz[i] * o, z = this.pz[i] + this.tx[i] * o;
-        if (this.branches && this.inBranchCorridor(x, z, null, -8)) continue;
-        g.push(M4.trs(x, this.py[i] - 0.2, z, this.heading(i) + (side > 0 ? Math.PI : 0), 0, 0));
-        for (let st = 0; st < 4; st++) { g.box(2.2, 1 + st * 1.1, 22, hexc(T.neon ? 0x2a2350 : 0xdfe6ee), -st * 2.2, (1 + st * 1.1) / 2, 0);
-          for (let k = 0; k < 14; k++) { const cz = -10 + k * 1.5 + r() * 0.4; const cc = hexc(cols[r() * cols.length | 0], T.neon ? 0.5 : 0); g.box(0.6, 0.9, 0.6, cc, -st * 2.2, 1 + st * 1.1 + 0.45, cz); g.sphere(0.28, 5, 3, hexc(0xf2c9a0), -st * 2.2, 1 + st * 1.1 + 1.15, cz); } }
-        g.box(9.5, 0.3, 23, hexc(T.wall[0], T.neon ? 0.6 : 0), -3.3, 7.2, 0); for (const zz of [-11, 11]) g.box(0.3, 7.2, 0.3, hexc(0x8a9099), 0.8, 3.6, zz);
-        g.pop();
-      }
-      for (let i = 20; i < this.N; i += 46) for (const side of [-1, 1]) { // flag poles
-        const o = side * (this.wallD + 1.6); const x = this.px[i] - this.tz[i] * o, z = this.pz[i] + this.tx[i] * o; if (this.branches && this.inBranchCorridor(x, z, null, -3)) continue;
-        g.push(M4.trs(x, this.py[i], z, this.heading(i), 0, 0)); g.cyl(0.08, 6, 4, hexc(0xdfe6ee), 'y', 0, 3, 0); g.box(0.06, 1.1, 1.8, hexc(cols[(i / 46 | 0) % cols.length], T.neon ? 0.7 : 0.1), 0, 5.3, 0.95); g.pop(); }
-      if (!T.neon) for (let k = 0; k < 6; k++) { // hot-air balloons
-        const x = lerp(B.minx - 60, B.maxx + 60, r()), z = lerp(B.minz - 60, B.maxz + 60, r()), y = 70 + r() * 70, c1 = hexc(cols[r() * cols.length | 0], 0.25), c2 = hexc(cols[r() * cols.length | 0], 0.25);
-        g.sphere(9, 10, 7, c1, x, y, z, 1.15); g.cyl(9.05, 3, 10, c2, 'y', x, y, z); g.cyl(1.6, 7, 8, c1, 'y', x, y - 10, z, c1, 6.5); g.box(2.4, 2, 2.4, hexc(0x8a5f36), x, y - 14, z); }
-    }
-    // meme maps: giant landmarks you can see from the track
-    if (this.def.meme) {
-      const cx = (B.minx + B.maxx) / 2, cz = (B.minz + B.maxz) / 2, R2 = Math.max(B.maxx - B.minx, B.maxz - B.minz) / 2 + 70;
-      for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2 + 0.3; let x = cx + Math.cos(a) * R2, z = cz + Math.sin(a) * R2; if (this.distAt(x, z) < this.wallD + 30) continue; const y = this.groundHeight(x, z) - 0.5;
-        g.push(M4.trs(x, y, z, Math.atan2(cx - x, cz - z), 0, 0, 1));
+  }
+  _landmark(g, T, k) {
         if (T.props === 'sixseven') { this._digit(g, 6, -7, 0, 0, 3.2, hexc(0xffc928, 0.4)); this._digit(g, 7, 7, 0, 0, 3.2, hexc(0xff5ad0, 0.4)); }
         else if (T.props === 'stonks') { for (let q = 0; q < 7; q++) { const hh = 8 + q * 7; g.box(5, hh, 5, hexc(0x1fd65f, 0.5), (q - 3) * 7, hh / 2, 0); } g.push(M4.trs(0, 52, 0, 0, 0, -0.75)); g.box(60, 3, 3, hexc(0x1fd65f, 0.8)); g.pop(); g.push(M4.trs(24, 72, 0, 0, 0, -0.75)); g.wedge(12, 12, 3, hexc(0x1fd65f, 0.8), 0, 0, 0, 0); g.pop(); }
         else if (T.props === 'toilet') { if (k % 2) this._toilet(g, 0, 0, 0, 6); else this._duck(g, 0, 0, 0, 9); }
-        g.pop(); }
-    }
-    // distant mountains ring (not in city)
-    if (T.props !== 'city') {
-      const cx = (B.minx + B.maxx) / 2, cz = (B.minz + B.maxz) / 2, rad = Math.max(B.maxx - B.minx, B.maxz - B.minz) / 2 + 420;
-      for (let k = 0; k < 24; k++) { const a = k / 24 * Math.PI * 2 + r() * 0.2; const hh = 90 + r() * 120; const mc = T.mtn ? hexc(T.mtn) : T.props === 'cactus' ? hexc(0xc77a45) : T.props === 'pines' ? hexc(0x8ea4c0) : hexc(0x5a8a5a); g.cone(120 + r() * 60, hh, 6, mc, cx + Math.cos(a) * rad, -20, cz + Math.sin(a) * rad); if (!T.noCap) g.cone(40, hh * 0.25, 6, hexc(0xffffff), cx + Math.cos(a) * rad, hh * 0.75 - 20, cz + Math.sin(a) * rad); }
-    }
-    return g;
   }
   // seven-segment style digit (6 or 7) standing on the ground, s = scale (1 → ~6 m tall)
   _digit(g, d, x, y, z, s, col) {

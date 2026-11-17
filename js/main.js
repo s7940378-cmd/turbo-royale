@@ -60,7 +60,7 @@ const App = window.App = {
     // show floor: asphalt plaza, painted rings, chequered band, grass beyond
     ring(0, 9, 0, () => E(0x343a48)); ring(9, 9.35, 0.01, () => E(0xffd23a, 0.5)); ring(9.35, 17, 0, () => E(0x2c313d));
     ring(17, 18.2, 0.01, i => E(i % 2 ? 0x15171c : 0xe9edf2), 72); ring(18.2, 19.4, 0.01, i => E(i % 2 ? 0xe9edf2 : 0x15171c), 72);
-    ring(19.4, 30, 0, () => E(0x2c313d)); ring(30, 31, 0.02, i => E(i % 2 ? 0xe8333a : 0xffffff), 96); ring(31, 170, -0.02, () => E(0x3f8a4a), 48);
+    ring(19.4, 30, 0, () => E(0x2c313d)); ring(30, 31, 0.02, i => E(i % 2 ? 0xe8333a : 0xffffff), 96);
     // backdrop gantry
     // sign gantry: two posts, a crossbar right on top of the banner and a framed backing board so the sign sits in a solid frame
     for (const sx of [-1, 1]) { g.rbox(1.3, 12.8, 1.3, E(0x2b3a6b), sx * 16.1, 6.4, -26.6); g.rbox(2.4, 0.5, 2.4, E(0x1d274d), sx * 16.1, 0.25, -26.6); g.rbox(1.6, 0.35, 1.6, E(0xffd23a, 0.5), sx * 16.1, 12.9, -26.6); }
@@ -69,21 +69,7 @@ const App = window.App = {
     for (let k = -3; k <= 3; k++) g.rbox(1.6, 0.5, 0.4, E(k % 2 ? 0xffe14a : 0x2bf0ff, 1), k * 4.6, 12.55, -25.85);
     // scenery: trees, tyre stacks, cones, distant hills
     const r = rng(77);
-    for (let k = 0; k < 46; k++) { const a = r() * Math.PI * 2, rr = 36 + r() * 70; if (Math.abs(Math.sin(a) * rr) < 14 && Math.cos(a) * rr > 0 && false) continue; const x = Math.cos(a) * rr, z = Math.sin(a) * rr; if ((z > 6 && Math.abs(x) < 30) || (z < 0 && z > -60 && Math.abs(x) < 20)) continue; const sc = 0.9 + r() * 0.9;
-      g.cyl(0.45 * sc, 3 * sc, 6, E(0x7a4f2a), 'y', x, 1.5 * sc, z); const leaf = mixc(E(0x2f9e3a), E(0x7fd23a), r()); g.sphere(2.4 * sc, 9, 6, leaf, x, 4.4 * sc, z); g.sphere(1.7 * sc, 8, 5, shade(leaf, 1.1), x + 0.9 * sc, 5.6 * sc, z + 0.4); }
     for (const sx of [-1, 1]) { for (let k = 0; k < 3; k++) g.cyl(0.8, 0.5, 12, E(k % 2 ? 0x222226 : 0x2c2c32), 'y', sx * 21, 0.25 + k * 0.5, -6); for (let k = 0; k < 4; k++) { g.cone(0.4, 1.0, 8, E(0xff7a1c), sx * (12 + k * 2.2), 0, 7 - k * 1.5); } }
-    for (let k = 0; k < 22; k++) { const a = k / 22 * Math.PI * 2 + r() * 0.2, hh = 28 + r() * 40, rad = 150; g.cone(46 + r() * 30, hh, 7, mixc(E(0x5a4a9a), E(0x8a5aa8), r()), Math.cos(a) * rad, -4, Math.sin(a) * rad); }
-    // sky: warm horizon to deep blue, sun, clouds
-    const dome = new Geo(), HZ = E(0xffb27a, 1), MID = E(0xb565c8, 1), TOP = E(0x1a2470, 1);
-    for (let j = 0; j < 10; j++) for (let i = 0; i < 28; i++) {
-      const t0 = j / 10 * Math.PI / 2, t1 = (j + 1) / 10 * Math.PI / 2, p0 = i / 28 * Math.PI * 2, p1 = (i + 1) / 28 * Math.PI * 2, rr = 320;
-      const P = (t, p) => [Math.cos(t) * Math.cos(p) * rr, Math.sin(t) * rr * 0.7 - 12, Math.cos(t) * Math.sin(p) * rr];
-      const C = f => f < 0.3 ? mixc(HZ, MID, f / 0.3) : mixc(MID, TOP, (f - 0.3) / 0.7), cA = C(j / 10), cB = C((j + 1) / 10);
-      const A = P(t0, p0), B = P(t0, p1), Cc = P(t1, p1), D = P(t1, p0);
-      dome.vert(...A, 0, 1, 0, cA); dome.vert(...Cc, 0, 1, 0, cB); dome.vert(...B, 0, 1, 0, cA); dome.vert(...A, 0, 1, 0, cA); dome.vert(...D, 0, 1, 0, cB); dome.vert(...Cc, 0, 1, 0, cB);
-    }
-    dome.sphere(26, 16, 10, E(0xfff0c0, 1), -70, 22, -290); dome.sphere(40, 14, 8, [1, 0.85, 0.6, 0.6], -70, 22, -300);
-    for (let k = 0; k < 9; k++) { const a = -Math.PI * (0.1 + 0.8 * r()), dd = 230 + r() * 40, y = 50 + r() * 60; for (let q = 0; q < 4; q++) dome.sphere(12 + r() * 10, 9, 6, [1, 0.78, 0.8, 0.75], Math.cos(a) * dd + (r() - 0.5) * 44, y + r() * 6, Math.sin(a) * dd + (r() - 0.5) * 30, 0.5); }
     const tex = Textures.get(R), bn = new Geo(); bn.quad([-15, 8.2, -26.1], [15, 8.2, -26.1], [15, 11.9, -26.1], [-15, 11.9, -26.1], E(0xffffff, 0.75), [[0, 1], [1, 1], [1, 0], [0, 0]]);
     // searchlights (swaying beams) and a pulsing floor ring replace the old floating dots
     const beam = new Geo(); beam.cyl(0.35, 70, 10, [1, 0.95, 0.75, 1], 'y', 0, 35, 0, [1, 0.95, 0.75, 1], 4.5);
@@ -93,10 +79,49 @@ const App = window.App = {
     const pulse = R.mesh(R.upload(pr), { alpha: 0.9, blend: 'add' });
     const tall = new Geo(); tall.cyl(2.5, 1.4, 24, E(0x2b3a6b), 'y', 0, 0.7, 0); tall.cyl(2.62, 0.14, 24, E(0xffd23a, 0.9), 'y', 0, 1.28, 0);
     this.lobby = {
-      scene: { meshes: [R.mesh(R.upload(g)), R.mesh(R.upload(dome), { fog: false, twoSided: true }), R.mesh(R.upload(bn), { tex: tex.banner }), pulse, ...beams.map(b => b.m)], particles: [new Particles(200, true)], fog: { color: [0.86, 0.6, 0.6], near: 70, far: 300 }, light: { dir: [0.35, 0.72, 0.6].map(v => v / Math.hypot(0.35, 0.72, 0.6)), sky: [0.72, 0.64, 0.82], ground: [0.42, 0.32, 0.42], sun: [0.9, 0.7, 0.55] }, sky: [0.86, 0.6, 0.6] },
+      scene: { meshes: [R.mesh(R.upload(g)), null, R.mesh(R.upload(bn), { tex: tex.banner }), pulse, ...beams.map(b => b.m)], particles: [new Particles(200, true)], fog: { color: [0.86, 0.6, 0.6], near: 70, far: 300 }, light: { dir: [0.35, 0.72, 0.6].map(v => v / Math.hypot(0.35, 0.72, 0.6)), sky: [0.72, 0.64, 0.82], ground: [0.42, 0.32, 0.42], sun: [0.9, 0.7, 0.55] }, sky: [0.86, 0.6, 0.6] },
       cam: { x: 0, y: 3.4, z: 11.5, tx: 0, ty: 1.2, tz: 0, fov: 0.9, near: 0.3, far: 600 }, karts: [], t: 0, beams, pulse, tallG: R.upload(tall), camD: 11.5, rows: 1,
     };
+    this.lobbyTheme((this.sel && this.sel.track) || TRACKS[0].id);
     this.lobbyKarts();
+  },
+  // the lobby's surroundings (sky, ground, scenery, far hills, fog and light) match the selected map
+  lobbyTheme(trackId) {
+    const L = this.lobby, R = this.R; if (!L || L.themeId === trackId) return;
+    const def = TRACKS.find(t => t.id === trackId) || TRACKS[0], T = THEMES[def.theme]; L.themeId = def.id;
+    const E = (h, e) => hexc(h, e === undefined ? 0 : e), g = new Geo(), r = rng(hashStr('lobby-' + def.id)), helper = Object.create(Track.prototype);
+    // ground beyond the plaza: theme ground, blotched with its second colour
+    for (let j = 0; j < 6; j++) for (let i = 0; i < 64; i++) {
+      const r0 = 31 + j * 23, r1 = r0 + 23, a0 = i / 64 * Math.PI * 2, a1 = (i + 1) / 64 * Math.PI * 2, P = (rr, a) => [Math.cos(a) * rr, -0.02, Math.sin(a) * rr];
+      const c = mixc(E(T.ground), E(T.ground2 || T.ground), (Math.sin(i * 1.7 + j * 2.3) * 0.5 + 0.5) * 0.7);
+      g.vert(...P(r0, a0), 0, 1, 0, c); g.vert(...P(r1, a1), 0, 1, 0, c); g.vert(...P(r1, a0), 0, 1, 0, c); g.vert(...P(r0, a0), 0, 1, 0, c); g.vert(...P(r0, a1), 0, 1, 0, c); g.vert(...P(r1, a1), 0, 1, 0, c);
+    }
+    // scenery props of the map
+    const city = T.props === 'city';
+    for (let k = 0, placed = 0; k < 400 && placed < (city ? 22 : 46); k++) { const a = r() * Math.PI * 2, rr = (city ? 46 : 36) + r() * 70, x = Math.cos(a) * rr, z = Math.sin(a) * rr;
+      if ((z > 6 && Math.abs(x) < 30) || (z < 0 && z > -60 && Math.abs(x) < 20)) continue;
+      g.push(M4.trs(x, 0, z, r() * 6.28, 0, 0, 0.9 + r() * 0.8)); helper._prop(g, T, r); g.pop(); placed++; }
+    // meme maps: their giant landmarks stand behind the sign
+    if (def.meme) [[-55, -95], [60, -100]].forEach((q, k) => { g.push(M4.trs(q[0], 0, q[1], Math.atan2(-q[0], -q[1]), 0, 0, 0.8)); helper._landmark(g, T, k); g.pop(); });
+    // far hills
+    for (let k = 0; k < 22; k++) { const a = k / 22 * Math.PI * 2 + r() * 0.2, hh = (city ? 20 : 28) + r() * 40, rad = 160, mc = T.mtn ? E(T.mtn) : T.props === 'cactus' ? E(0xc77a45) : T.props === 'pines' ? E(0x8ea4c0) : city ? E(0x1b1530) : E(0x5a8a5a);
+      g.cone(46 + r() * 30, hh, 7, mixc(mc, shade(mc, 1.25), r()), Math.cos(a) * rad, -4, Math.sin(a) * rad); if (!T.noCap && !T.neon && hh > 52) g.cone(16, hh * 0.25, 7, E(0xffffff), Math.cos(a) * rad, hh * 0.75 - 4, Math.sin(a) * rad); }
+    // sky dome: horizon (fog colour) → sky → top
+    const dome = new Geo(), HZ = [...T.fog, 1], MID = [...T.sky, 1], TOP = T.skyTop ? E(T.skyTop, 1) : T.neon ? E(0x05020f, 1) : E(0x2f7de0, 1);
+    for (let j = 0; j < 10; j++) for (let i = 0; i < 28; i++) {
+      const t0 = j / 10 * Math.PI / 2, t1 = (j + 1) / 10 * Math.PI / 2, p0 = i / 28 * Math.PI * 2, p1 = (i + 1) / 28 * Math.PI * 2, rr = 320;
+      const P = (t, p) => [Math.cos(t) * Math.cos(p) * rr, Math.sin(t) * rr * 0.7 - 12, Math.cos(t) * Math.sin(p) * rr];
+      const C = f => f < 0.3 ? mixc(HZ, MID, f / 0.3) : mixc(MID, TOP, (f - 0.3) / 0.7), cA = C(j / 10), cB = C((j + 1) / 10);
+      const A = P(t0, p0), B = P(t0, p1), Cc = P(t1, p1), D = P(t1, p0);
+      dome.vert(...A, 0, 1, 0, cA); dome.vert(...Cc, 0, 1, 0, cB); dome.vert(...B, 0, 1, 0, cA); dome.vert(...A, 0, 1, 0, cA); dome.vert(...D, 0, 1, 0, cB); dome.vert(...Cc, 0, 1, 0, cB);
+    }
+    if (T.neon) dome.sphere(22, 16, 10, E(0xff4fe0, 1), -70, 40, -290); else { dome.sphere(24, 16, 10, E(0xfff0c0, 1), -70, 60, -290); dome.sphere(38, 14, 8, [1, 0.92, 0.7, 0.5], -70, 60, -300); }
+    if (!T.neon) for (let k = 0; k < 9; k++) { const a = -Math.PI * (0.1 + 0.8 * r()), dd = 230 + r() * 40, y = 50 + r() * 60; for (let q = 0; q < 4; q++) dome.sphere(12 + r() * 10, 9, 6, [1, 1, 1, 0.8], Math.cos(a) * dd + (r() - 0.5) * 44, y + r() * 6, Math.sin(a) * dd + (r() - 0.5) * 30, 0.5); }
+    const ms = L.scene.meshes; if (L.envMesh) { const i = ms.indexOf(L.envMesh); if (i >= 0) ms.splice(i, 1); }
+    L.envMesh = R.mesh(R.upload(g)); ms.splice(1, 0, L.envMesh);
+    const di = ms.indexOf(L.domeMesh); L.domeMesh = R.mesh(R.upload(dome), { fog: false, twoSided: true }); if (di >= 0) ms[di] = L.domeMesh; else { const ni = ms.indexOf(null); if (ni >= 0) ms[ni] = L.domeMesh; else ms.push(L.domeMesh); }
+    const Ld = T.light, dn = Math.hypot(...Ld.dir);
+    L.scene.fog = { color: T.fog.slice(), near: 70, far: 300 }; L.scene.light = { dir: Ld.dir.map(v => v / dn), sky: Ld.sky, ground: Ld.ground, sun: Ld.sun };
   },
   lobbyKarts() {
     const L = this.lobby; const R = this.R; const props = KartFactory.propGeo(R);
@@ -131,7 +156,7 @@ const App = window.App = {
     c.x = lerp(c.x, tgt.x, k); c.y = lerp(c.y, tgt.y, k); c.z = lerp(c.z, tgt.z, k); c.tx = lerp(c.tx, tgt.tx, k); c.ty = lerp(c.ty, tgt.ty, k);
     L.karts.forEach((kk, i) => { const yaw = i === 0 ? (this.dragYaw !== undefined ? this.dragYaw : L.t * 0.45 + 0.6) : kk.yaw + Math.sin(L.t + i) * 0.1; kk.view.update(kk.pos[0], kk.pos[1] + 0.06, kk.pos[2], yaw, 0, 0, Math.sin(L.t * 0.7) * 0.3, 0, dt, {}); });
     // in the Locker you only see your own kart (party members' karts are hidden until you go back)
-    L.karts.forEach((kk, i) => { if (i) for (const m of kk.meshes) m.visible = !locker; if (kk.tag) kk.tag.style.visibility = locker && i ? 'hidden' : ''; });
+    L.karts.forEach((kk, i) => { if (i && locker) for (const m of kk.meshes) m.visible = false; else if (i) for (const m of kk.meshes) if (!kk.view.meshes.includes(m)) m.visible = true; if (kk.tag) kk.tag.style.visibility = locker && i ? 'hidden' : ''; });
     L.beams.forEach((b, i) => M4.trs(b.x, 0, b.z, i, Math.sin(L.t * 0.45 + i * 1.7) * 0.32, Math.cos(L.t * 0.37 + i * 2.3) * 0.32 + (b.x > 0 ? 0.25 : -0.25), 1, b.m.m));
     L.pulse.alpha = 0.45 + 0.4 * Math.sin(L.t * 2.2); { const s = 1 + 0.012 * Math.sin(L.t * 2.2); M4.trs(0, 0, 0, L.t * 0.1, 0, 0, s, L.pulse.m); }
     const ps = L.scene.particles[0];
@@ -294,6 +319,7 @@ const App = window.App = {
   },
   partySel() { if (Net.party && !Net.isLeader()) { const l = Net.leader(); const s = l && l.presence.sel; if (s && MODES[s.mode] && TRACKS.find(t => t.id === s.track)) return s; } return this.sel; },
   renderPlay() {
+    { const st = this.partySel ? this.partySel() : this.sel; if (st && st.track) this.lobbyTheme(st.track); }
     const s = this.partySel(); const m = MODES[s.mode], t = TRACKS.find(x => x.id === s.track);
     $('modeName').textContent = m.name; $('modeSub').textContent = (Net.party && !Net.isLeader()) ? 'Leader picked' : 'Tap to change mode'; $('modeTrack').textContent = t.name;
     $('modeImg').style.backgroundImage = `url(${this.trackThumb(t.id)})`;
