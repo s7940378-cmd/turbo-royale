@@ -220,14 +220,14 @@ const App = window.App = {
     this.modal(`<h3>Redeem code</h3><div class="row"><input class="inp" id="rcIn" maxlength="24" placeholder="ENTER CODE"><button class="btn y" id="rcOk">Redeem</button></div>
       <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn" id="rcBack">Back</button></div>`);
     const inp = $('rcIn'); setTimeout(() => inp.focus(), 50);
-    const CODES = { 889511634: { coins: 5000 }, 1016588056: { coins: 10000 }, 2536132198: { coins: 100000 } }; // stored as hashes
+    const CODES = { 889511634: { coins: 5000 }, 1016588056: { coins: 10000 }, 2536132198: { coins: 100000 }, 3235635659: { levels: 50 } }; // stored as hashes
     const go = () => {
       const code = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); if (!code) return;
       const h = hashStr('code:' + code), r = CODES[h], p = Account.profile; p.redeemed = p.redeemed || [];
       if (!r) { this.toast('That code is not valid.'); inp.select(); return; }
       if (p.redeemed.includes(h)) { this.toast('You already redeemed that code.'); return; }
-      p.redeemed.push(h); p.coins += r.coins; Account.save(); Sfx.play('buy'); this.refreshTop(); this.closeModal();
-      this.toast(`🎉 Code redeemed! <b>+${r.coins.toLocaleString()}</b> Kart Coins`, 5000);
+      p.redeemed.push(h); p.coins += r.coins || 0; let got = []; if (r.levels) { p.xp = (p.xp || 0) + r.levels * PASS_XP; got = Account.claimTiers(); } Account.save(); Sfx.play('buy'); this.refreshTop(); this.closeModal();
+      this.toast(r.levels ? `🎉 Code redeemed! <b>+${r.levels} levels</b> — you are now level ${Account.level}.${got.length ? ' Turbo Pass rewards unlocked: ' + got.length : ''}` : `🎉 Code redeemed! <b>+${r.coins.toLocaleString()}</b> Kart Coins`, 6000); this.lobbyKarts();
     };
     $('rcOk').onclick = go; inp.onkeydown = e => { if (e.key === 'Enter') go(); };
     $('rcBack').onclick = () => this.settingsModal();
