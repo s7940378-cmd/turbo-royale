@@ -208,6 +208,23 @@ kbd{background:rgba(255,255,255,.15);border-radius:5px;padding:1px 6px;font-weig
 .coinbox{display:flex;align-items:center;gap:6px}.coinbox.max{border-color:var(--yellow);color:var(--yellow)}
 #hud.podium>*:not(#hCenter){display:none!important}#hud.podium #hCenter{top:5%}#hud.podium #hMsg{font-size:clamp(30px,5.5vw,64px)}
 #hItem2{position:absolute;left:-58px;top:22px;width:50px;height:50px;border-radius:12px;background:rgba(5,10,40,.6);border:3px solid rgba(255,255,255,.25);display:grid;place-items:center;font-size:28px;font-family:system-ui;opacity:.45}#hItem2.has{opacity:1;border-color:var(--yellow)}
+.pcard{position:relative;display:flex;align-items:center;gap:10px;padding:7px 12px;border-radius:12px;min-height:52px;overflow:hidden;border:2px solid rgba(255,255,255,.28);box-shadow:inset 0 0 0 200px rgba(5,10,40,.2);text-shadow:0 2px 3px rgba(0,0,0,.8);text-align:left;color:#fff}
+.pcard.me{border-color:var(--yellow)}.pcard.big{min-height:74px;padding:12px 16px;border-radius:16px}
+.pc-lvl{width:36px;height:36px;border-radius:50%;background:rgba(5,10,40,.75);border:2px solid var(--yellow);display:grid;place-items:center;font-family:'Lilita One';font-size:14px;flex:none;position:relative;z-index:1}.pc-lvl.pr{border-color:#ff7ac8;box-shadow:0 0 10px #ff7ac8}
+.pcard.big .pc-lvl{width:48px;height:48px;font-size:18px}
+.pc-txt{flex:1;min-width:0;position:relative;z-index:1}.pc-txt b{display:block;font-family:'Lilita One';font-weight:400;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pcard.big .pc-txt b{font-size:24px}
+.pc-txt i{font-style:normal;font-family:Rubik;font-size:10px;font-weight:900;letter-spacing:.7px;text-transform:uppercase}.pcard.big .pc-txt i{font-size:13px}
+.pc-badge,.pc-wins{position:relative;z-index:1;font-family:Rubik;font-weight:900;font-size:13px;white-space:nowrap}
+.shine::after{content:'';position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.42) 50%,transparent 65%);background-size:260% 100%;animation:shine 2.8s linear infinite;pointer-events:none}
+@keyframes shine{from{background-position:130% 0}to{background-position:-130% 0}}
+.bthumb{position:relative;overflow:hidden;width:84%;height:54%;border-radius:10px;border:2px solid rgba(255,255,255,.5);box-shadow:0 4px 0 rgba(0,0,0,.3)}
+.tthumb{font-family:'Lilita One';font-size:19px;text-transform:uppercase;text-align:center;padding:0 6px;line-height:1.1;text-shadow:0 2px 0 rgba(0,0,0,.5)}
+.mem .mt{display:block;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.5px}
+#party{max-height:calc(100% - 122px)!important}
+#myCard{position:absolute;left:14px;bottom:14px;width:290px;padding:0;border-radius:16px}#myCard:hover{filter:brightness(1.1)}
+#lineup{position:absolute;left:50%;bottom:6%;transform:translateX(-50%);width:min(880px,94vw);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;font-family:Rubik;text-transform:none;animation:tin .4s ease-out}
+.tier.prest{border-color:#ff7ac8}.tier.prest .n{background:linear-gradient(90deg,#c2186b,#6b1fd6)}
+@media(max-width:640px){#myCard{display:none}#lineup{grid-template-columns:repeat(2,minmax(0,1fr))}}
 #flash{position:fixed;inset:0;z-index:7;background:#bfe8ff;opacity:0;pointer-events:none;mix-blend-mode:screen}
 #touch{position:fixed;inset:auto 0 0 0;height:180px;z-index:8;pointer-events:none}
 #touch button{position:absolute;pointer-events:auto;width:84px;height:84px;border-radius:50%;background:rgba(255,255,255,.18);border:3px solid rgba(255,255,255,.35);font-size:30px;font-family:system-ui;touch-action:none}
@@ -256,6 +273,7 @@ kbd{background:rgba(255,255,255,.15);border-radius:5px;padding:1px 6px;font-weig
       <div id="partyBody"></div>
     </div>
     <button class="btn b hidden" id="daily">🎁 Claim daily reward</button>
+    <button id="myCard" title="Your player card — click to edit"></button>
     <div id="playBox">
       <button id="modeCard"><div class="mi" id="modeImg"></div><div><small class="muted" id="modeSub">Mode</small><b id="modeName">Grand Prix</b><small id="modeTrack" class="muted"></small></div></button>
       <button class="btn y" id="playBtn">Play</button>
@@ -304,6 +322,7 @@ kbd{background:rgba(255,255,255,.15);border-radius:5px;padding:1px 6px;font-weig
   <button id="hLook" title="Look behind (hold)">👀<small>BACK</small></button>
   <div id="hCenter"><div id="hMsg"></div><div id="hSub"></div></div>
   <div id="hFeed"></div>
+  <div id="lineup" class="hidden"></div>
   <div id="hSpdBox"><span id="hSpd">0</span><small>mph</small><div class="drift" id="hDrift"></div></div>
   <canvas id="hMap"></canvas>
 </div>
@@ -326,15 +345,15 @@ kbd{background:rgba(255,255,255,.15);border-radius:5px;padding:1px 6px;font-weig
 <div id="modal" class="modal hidden"><div class="mbox" id="mbox"></div></div>
 <div id="toasts"></div>
 
-<script src="js/engine.js?v=202611162012"></script>
-<script src="js/data.js?v=202611162012"></script>
-<script src="js/sys.js?v=202611162012"></script>
-<script src="js/kart.js?v=202611162012"></script>
-<script src="js/track.js?v=202611162012"></script>
-<script src="js/features.js?v=202611162012"></script>
-<script src="js/race.js?v=202611162012"></script>
-<script src="js/account.js?v=202611162012"></script>
-<script src="js/net.js?v=202611162012"></script>
-<script src="js/main.js?v=202611162012"></script>
+<script src="js/engine.js?v=202611162026"></script>
+<script src="js/data.js?v=202611162026"></script>
+<script src="js/sys.js?v=202611162026"></script>
+<script src="js/kart.js?v=202611162026"></script>
+<script src="js/track.js?v=202611162026"></script>
+<script src="js/features.js?v=202611162026"></script>
+<script src="js/race.js?v=202611162026"></script>
+<script src="js/account.js?v=202611162026"></script>
+<script src="js/net.js?v=202611162026"></script>
+<script src="js/main.js?v=202611162026"></script>
 </body>
 </html>

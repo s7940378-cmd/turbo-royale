@@ -4,7 +4,7 @@ const ORD = n => n + (['th', 'st', 'nd', 'rd'][(n % 100 - 20) % 10] || ['th', 's
 
 class Racer {
   constructor(o, race) {
-    Object.assign(this, { id: o.id, name: o.name, type: o.type, cos: Object.assign({}, DEFAULT_EQUIP, o.cos || {}), human: o.type !== 'bot' });
+    Object.assign(this, { id: o.id, name: o.name, lvl: o.lvl | 0, type: o.type, cos: Object.assign({}, DEFAULT_EQUIP, o.cos || {}), human: o.type !== 'bot' });
     this.local = o.type === 'local'; this.bot = o.type === 'bot'; this.remote = o.type === 'remote';
     const ks = kartStats(this.cos); this.stats = ks.s; this.offroadOK = ks.offroad; const eng = CAT[this.cos.engine]; this.flameCol = eng && eng.flame ? hexc(eng.flame) : null;
     this.x = 0; this.y = 0; this.z = 0; this.yaw = 0; this.vx = 0; this.vz = 0; this.f = 0; this.steer = 0; this.lat = 0;
@@ -157,6 +157,7 @@ class Race {
     this.h.lap.parentElement.classList.toggle('hidden', this.mode === 'ko');
     this.setItemUI();
     this.msg('', '');
+    { const lu = document.getElementById('lineup'); if (lu) { lu.innerHTML = this.app.cardHTML ? this.racers.slice().reverse().map(r => this.app.cardHTML({ tag: r.name, lvl: r.lvl, cos: r.cos, me: r.local })).join('') : ''; lu.classList.toggle('hidden', this.racers.length < 2); this._lu = lu; } }
   }
   msg(big, sub, dur) {
     this.h.msg.textContent = big || ''; this.h.sub.textContent = sub || '';
@@ -181,6 +182,7 @@ class Race {
     if (this.state === 'intro') { this.introT -= dt; if (this.introT <= 0 || ctl.gas && this.t > 0.6) { this.state = 'count'; } }
     else if (this.state === 'count') {
       this.count -= dt; const c = Math.ceil(this.count - 0.6);
+      if (this._lu && this.count < 2.6) { this._lu.classList.add('hidden'); this._lu = null; }
       if (c !== this.lastCount && c >= 1 && c <= 3) { this.lastCount = c; this.msg(String(c), ''); Sfx.play('beep'); }
       if (ctl.gas && this.count < 1.3 && this.count > 0.6 && this.me) this.me._rs = true;
       if (ctl.gas && this.count > 1.5 && this.me) this.me._rs = false;
@@ -840,7 +842,9 @@ class Race {
     const k = (CAT[r.cos.trail] || CAT.t_none).kind; if (k === 'none' || sp < 6) return;
     r.trailT -= dt; if (r.trailT > 0) return; r.trailT = this.quality === 'low' ? 0.05 : 0.025;
     const p = back((Math.random() - 0.5) * 1.2, 0.5);
-    if (k === 'hearts') this.fxAdd.emit(p[0], p[1] + Math.random() * 0.5, p[2], (Math.random() - 0.5), 1.5, (Math.random() - 0.5), [1, 0.3, 0.55, 1], 0.9, 0.9, -0.5);
+    if (k === 'ember') { this.fxAdd.emit(p[0], p[1], p[2], (Math.random() - 0.5) * 3, 2 + Math.random() * 3, (Math.random() - 0.5) * 3, [1, 0.45 + Math.random() * 0.3, 0.1, 1], 0.45, 1.0, -0.2, 3); }
+    else if (k === 'prime') { const hc = hsl((this.t * 0.8) % 1); this.fxAdd.emit(p[0], p[1], p[2], 0, 0.6, 0, [1, 0.95, 0.6, 1], 1.2, 0.9, -0.9); this.fxAdd.emit(p[0] + (Math.random() - 0.5) * 1.4, p[1] + Math.random() * 1.2, p[2] + (Math.random() - 0.5) * 1.4, 0, 1, 0, [hc[0], hc[1], hc[2], 1], 0.4, 0.7); }
+    else if (k === 'hearts') this.fxAdd.emit(p[0], p[1] + Math.random() * 0.5, p[2], (Math.random() - 0.5), 1.5, (Math.random() - 0.5), [1, 0.3, 0.55, 1], 0.9, 0.9, -0.5);
     else if (k === 'bolt') { this.fxAdd.emit(p[0], p[1] + Math.random(), p[2], (Math.random() - 0.5) * 8, (Math.random() - 0.5) * 8, (Math.random() - 0.5) * 8, [1, 1, 0.5 + Math.random() * 0.5, 1], 0.6, 0.18); }
     else if (k === 'leaf') this.fxN.emit(p[0], p[1], p[2], (Math.random() - 0.5) * 3, 1.5 + Math.random(), (Math.random() - 0.5) * 3, [0.3 + Math.random() * 0.3, 0.8, 0.3, 0.9], 0.5, 1.2, 0, 3);
     else if (k === 'star') { this.fxAdd.emit(p[0], p[1], p[2], 0, 0.4, 0, [1, 0.85, 0.3, 1], 1.1, 1.0, -0.8); this.fxAdd.emit(p[0] + (Math.random() - 0.5), p[1] + Math.random(), p[2] + (Math.random() - 0.5), 0, 0, 0, [1, 1, 1, 1], 0.35, 0.5); }

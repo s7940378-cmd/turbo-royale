@@ -35,7 +35,7 @@ const Account = {
     const obj = JSON.parse(decodeURIComponent(escape(atob(code.slice(4))))); if (!obj || typeof obj !== 'object' || !obj.tag) throw new Error('bad');
     this.load(obj); this.save();
   },
-  get level() { return Math.floor(this.profile.xp / PASS_XP) + 1; },
+  get level() { return Math.min(PASS_MAX, Math.floor((this.profile.xp || 0) / PASS_XP) + 1); },
   ensureDaily() {
     const p = this.profile, k = todayKey();
     if (!p.daily || p.daily.date !== k) {

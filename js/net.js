@@ -157,7 +157,7 @@ const Net = {
   setParty(extra) {
     if (!this.cli) return;
     const p = Account.profile;
-    Object.assign(this.mine, { tag: p.tag, lvl: Account.level, cos: packCos(p.equip), jt: this.jt, host: this.isHost ? 1 : 0, pts: App.sessionPts || 0, wins: App.sessionWins || 0 }, extra || {});
+    Object.assign(this.mine, { tag: p.tag, lvl: Account.level, cos: packCos(p.equip), jt: this.jt, host: this.isHost ? 1 : 0, pts: App.sessionPts || 0, wins: App.sessionWins || 0, cw: p.stats.wins | 0, cr: p.stats.races | 0 }, extra || {});
     for (const k in this.mine) if (this.mine[k] === null) delete this.mine[k];
     const now = performance.now();
     if (now - (this._sendT || 0) >= 66) { this._sendT = now; this._publish(); }

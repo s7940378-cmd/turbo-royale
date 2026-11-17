@@ -9,7 +9,7 @@ const RARITY = {
 };
 const SLOTS = [
   { id: 'body', name: 'Kart' }, { id: 'paint', name: 'Paint' }, { id: 'wheels', name: 'Wheels' },
-  { id: 'driver', name: 'Driver' }, { id: 'engine', name: 'Engine' }, { id: 'trail', name: 'Trail' }, { id: 'horn', name: 'Horn' },
+  { id: 'driver', name: 'Driver' }, { id: 'engine', name: 'Engine' }, { id: 'trail', name: 'Trail' }, { id: 'horn', name: 'Horn' }, { id: 'banner', name: 'Banner' }, { id: 'title', name: 'Title' },
 ];
 // stats: speed/accel/handling multipliers (bodies only)
 const CATALOG = [
@@ -69,6 +69,52 @@ const CATALOG = [
   { id: 'h_siren', slot: 'horn', name: 'Siren', rarity: 'rare', kind: [660, 880, 660, 880] },
   { id: 'h_ufo', slot: 'horn', name: 'UFO', rarity: 'epic', kind: [300, 600, 1200, 600, 300] },
   { id: 'h_clown', slot: 'horn', name: 'Clown', rarity: 'uncommon', kind: [392, 330, 392, 330] },
+  // ---- Turbo Pass tiers 41–100 ----
+  { id: 'p_circuit', slot: 'paint', name: 'Circuit', rarity: 'epic', col: [0x10222e, 0x2bf0ff, 'stripe', 0.9], pass: true },
+  { id: 'd_phantom', slot: 'driver', name: 'Phantom', rarity: 'epic', col: 0x8a5cff, top: 'horns', pass: true },
+  { id: 't_ember', slot: 'trail', name: 'Embers', rarity: 'epic', kind: 'ember', pass: true },
+  { id: 'w_turbine', slot: 'wheels', name: 'Turbines', rarity: 'epic', kind: 'turbine', stats: [1.02, 1.0, 1.0, 1.03], pass: true, desc: 'Spinning turbine rims. Longer boosts.' },
+  { id: 'e_dark', slot: 'engine', name: 'Dark Matter Drive', rarity: 'legendary', kind: 'dark', stats: [1.05, 1.02, 1.0, 1.04], flame: 0x8a2cff, pass: true, desc: 'Purple-flame powerhouse.' },
+  // ---- Prestige exclusives (levels 150–400): Prime versions of pass rewards ----
+  { id: 'p_snow_x', slot: 'paint', name: 'Snowcap Prime', rarity: 'legendary', col: [0xffffff, 0x8fe9ff, 'two', 0.75], pass: true, ex: true },
+  { id: 'w_candy_x', slot: 'wheels', name: 'Candy Swirls Prime', rarity: 'legendary', kind: 'prime', stats: [1.0, 1.02, 1.01, 1.0], pass: true, ex: true, desc: 'Glowing gold Prime rims.' },
+  { id: 't_ice_x', slot: 'trail', name: 'Frostbite Prime', rarity: 'legendary', kind: 'prime', pass: true, ex: true },
+  { id: 'd_king_x', slot: 'driver', name: 'Royale King Prime', rarity: 'legendary', col: 0xffd23a, top: 'crown', pass: true, ex: true },
+  { id: 'e_fusion_x', slot: 'engine', name: 'Fusion Core Prime', rarity: 'legendary', kind: 'fusion', stats: [1.04, 1.03, 1.0, 1.05], flame: 0xfff2a8, pass: true, ex: true, desc: 'White-gold flame. Same power as the Fusion Core.' },
+  { id: 'b_hover_x', slot: 'body', name: 'Anti-Grav Prime', rarity: 'legendary', kind: 'hoverx', stats: [1.03, 1.02, 1.04, 1.03], offroad: true, pass: true, ex: true, desc: 'The level 400 trophy kart.' },
+  // ---- player card: banners ----
+  { id: 'bn_blue', slot: 'banner', name: 'Starter Blue', rarity: 'common', def: true, css: 'linear-gradient(120deg,#2a5bff,#6b1fd6)' },
+  { id: 'bn_sunset', slot: 'banner', name: 'Sunset', rarity: 'uncommon', css: 'linear-gradient(120deg,#ff7b2e,#c2186b 60%,#4a1a8c)' },
+  { id: 'bn_forest', slot: 'banner', name: 'Forest', rarity: 'common', css: 'linear-gradient(120deg,#1f7d3a,#7ddc1f)' },
+  { id: 'bn_ocean', slot: 'banner', name: 'Deep Ocean', rarity: 'uncommon', css: 'linear-gradient(120deg,#0b3a8a,#16c7c7)' },
+  { id: 'bn_candy', slot: 'banner', name: 'Bubblegum', rarity: 'uncommon', css: 'linear-gradient(120deg,#ff7ac8,#ffd27a)' },
+  { id: 'bn_carbon', slot: 'banner', name: 'Carbon Fibre', rarity: 'rare', css: 'repeating-linear-gradient(45deg,#1c1f26 0 6px,#2b303a 6px 12px)' },
+  { id: 'bn_checker', slot: 'banner', name: 'Chequered Flag', rarity: 'rare', css: 'repeating-conic-gradient(#15171c 0 25%,#e9edf2 0 50%) 0 0/28px 28px' },
+  { id: 'bn_neon', slot: 'banner', name: 'Neon Grid', rarity: 'rare', css: 'linear-gradient(rgba(255,43,214,.35) 2px,transparent 2px) 0 0/100% 14px,linear-gradient(90deg,rgba(43,240,255,.35) 2px,transparent 2px) 0 0/14px 100%,#180a3a' },
+  { id: 'bn_lava', slot: 'banner', name: 'Lava Flow', rarity: 'epic', css: 'linear-gradient(120deg,#2a0a0a,#ff5a1f 55%,#ffd23a)', anim: true },
+  { id: 'bn_galaxy', slot: 'banner', name: 'Galaxy', rarity: 'epic', css: 'radial-gradient(circle at 20% 30%,#ff4fe0 0,transparent 35%),radial-gradient(circle at 80% 70%,#2bf0ff 0,transparent 40%),#1a0b4a', anim: true },
+  { id: 'bn_ice', slot: 'banner', name: 'Glacier', rarity: 'rare', css: 'linear-gradient(120deg,#dff6ff,#58b7ff 60%,#2a5bff)' },
+  { id: 'bn_gold', slot: 'banner', name: 'Solid Gold', rarity: 'legendary', css: 'linear-gradient(120deg,#8a5a00,#ffd23a 40%,#fff2a8 55%,#c98a00)', anim: true },
+  { id: 'bn_flames', slot: 'banner', name: 'Turbo Flames', rarity: 'rare', css: 'linear-gradient(0deg,#ff3b1f,#ff9f2e 45%,#2a0a2a 100%)', pass: true },
+  { id: 'bn_storm', slot: 'banner', name: 'Storm Front', rarity: 'epic', css: 'linear-gradient(120deg,#1b2a4a,#5a6b8a 50%,#ffe14a 52%,#1b2a4a 54%)', pass: true, anim: true },
+  { id: 'bn_champion', slot: 'banner', name: 'Champion', rarity: 'epic', css: 'linear-gradient(120deg,#6b1fd6,#ffc928)', pass: true, anim: true },
+  { id: 'bn_century', slot: 'banner', name: 'Century', rarity: 'legendary', css: 'linear-gradient(120deg,#ff2bd6,#8a5cff 30%,#2bf0ff 60%,#8cff7a)', pass: true, anim: true },
+  // ---- player card: titles ----
+  { id: 'ti_rookie', slot: 'title', name: 'Rookie', rarity: 'common', def: true, color: '#e6eef8' },
+  { id: 'ti_speed', slot: 'title', name: 'Speed Demon', rarity: 'rare', color: '#ff6a4a' },
+  { id: 'ti_drift', slot: 'title', name: 'Drift King', rarity: 'rare', color: '#5fd0ff' },
+  { id: 'ti_sunday', slot: 'title', name: 'Sunday Driver', rarity: 'common', color: '#c8f0a0' },
+  { id: 'ti_coin', slot: 'title', name: 'Coin Collector', rarity: 'uncommon', color: '#ffd23a' },
+  { id: 'ti_nitro', slot: 'title', name: 'Nitro Addict', rarity: 'uncommon', color: '#ff9f2e' },
+  { id: 'ti_short', slot: 'title', name: 'Shortcut Hunter', rarity: 'uncommon', color: '#8cff7a' },
+  { id: 'ti_wall', slot: 'title', name: 'Wall Hugger', rarity: 'common', color: '#c9bfae' },
+  { id: 'ti_show', slot: 'title', name: 'Show-off', rarity: 'rare', color: '#ff7ac8' },
+  { id: 'ti_rocket', slot: 'title', name: 'Rocket Scientist', rarity: 'epic', color: '#c25cff' },
+  { id: 'ti_legend', slot: 'title', name: 'Living Legend', rarity: 'legendary', color: '#ffe14a' },
+  { id: 'ti_pass', slot: 'title', name: 'Pass Holder', rarity: 'uncommon', color: '#9fe6ff', pass: true },
+  { id: 'ti_charged', slot: 'title', name: 'Turbo Charged', rarity: 'rare', color: '#2bf0ff', pass: true },
+  { id: 'ti_unstoppable', slot: 'title', name: 'Unstoppable', rarity: 'epic', color: '#ff5aa8', pass: true },
+  { id: 'ti_centurion', slot: 'title', name: 'Centurion', rarity: 'legendary', color: '#ffd23a', pass: true },
   // wheels — stats multiply with the kart's
   { id: 'w_stock', slot: 'wheels', name: 'Stock', rarity: 'common', def: true, kind: 'stock', stats: [1, 1, 1, 1], desc: 'Standard wheels.' },
   { id: 'w_chrome', slot: 'wheels', name: 'Chrome Spinners', rarity: 'rare', kind: 'chrome', stats: [1.02, 0.99, 1.0, 1.0], desc: 'Shiny and slightly faster.' },
@@ -116,7 +162,7 @@ const CATALOG = [
   { id: 'h_low', slot: 'horn', name: 'Big Rig', rarity: 'epic', kind: [140, 140] },
 ];
 const CAT = Object.fromEntries(CATALOG.map(i => [i.id, i]));
-const DEFAULT_EQUIP = { body: 'b_classic', paint: 'p_cherry', wheels: 'w_stock', driver: 'd_rookie', engine: 'e_stock', trail: 't_none', horn: 'h_beep' };
+const DEFAULT_EQUIP = { body: 'b_classic', paint: 'p_cherry', wheels: 'w_stock', driver: 'd_rookie', engine: 'e_stock', trail: 't_none', horn: 'h_beep', banner: 'bn_blue', title: 'ti_rookie' };
 const STAT_NAMES = ['Speed', 'Acceleration', 'Handling', 'Boost'];
 // combined stats of a loadout: kart × wheels × engine
 function kartStats(cos) {
@@ -127,18 +173,15 @@ function kartStats(cos) {
 
 // Turbo Pass: 40 tiers, 1000 XP per tier
 const PASS_XP = 1000;
+const PASS_MAX = 400; // level cap
+const PASS_ITEMS = { 5: 'p_snow', 10: 'w_candy', 13: 'w_cyber', 16: 't_ice', 19: 'b_shark', 22: 'd_alien', 28: 'p_toxic', 34: 'd_king', 37: 'e_fusion', 40: 'b_hover',
+  45: 'ti_pass', 50: 'bn_flames', 55: 'p_circuit', 60: 'ti_charged', 65: 'bn_storm', 70: 'd_phantom', 75: 'bn_champion', 80: 'ti_unstoppable', 85: 't_ember', 90: 'w_turbine', 95: 'e_dark', 99: 'ti_centurion', 100: 'bn_century',
+  // prestige: every 50 levels past 100, an exclusive Prime version of a pass reward
+  150: 'p_snow_x', 200: 'w_candy_x', 250: 't_ice_x', 300: 'd_king_x', 350: 'e_fusion_x', 400: 'b_hover_x' };
+const PASS_PRESTIGE = [150, 200, 250, 300, 350, 400];
 const PASS = (() => {
-  const items = ['p_snow', 'w_candy', 't_ice', 'd_alien', 'p_toxic', 'd_king', 'b_hover'];
   const tiers = [];
-  for (let t = 1; t <= 40; t++) {
-    let r;
-    if (t === 5) r = { item: 'p_snow' }; else if (t === 10) r = { item: 'w_candy' }; else if (t === 16) r = { item: 't_ice' };
-    else if (t === 22) r = { item: 'd_alien' }; else if (t === 28) r = { item: 'p_toxic' }; else if (t === 34) r = { item: 'd_king' };
-    else if (t === 40) r = { item: 'b_hover' };
-    else if (t === 13) r = { item: 'w_cyber' }; else if (t === 19) r = { item: 'b_shark' }; else if (t === 37) r = { item: 'e_fusion' };
-    else r = { coins: t % 3 === 0 ? 300 : 150 };
-    tiers.push(r);
-  }
+  for (let t = 1; t <= PASS_MAX; t++) tiers.push(PASS_ITEMS[t] ? { item: PASS_ITEMS[t] } : { coins: t > 100 ? 100 : t > 40 ? (t % 10 === 0 ? 500 : 200) : (t % 3 === 0 ? 300 : 150) });
   return tiers;
 })();
 

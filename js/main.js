@@ -117,6 +117,7 @@ const App = window.App = {
     document.querySelectorAll('.tab').forEach(b => b.onclick = () => { Sfx.play('click'); this.showTab(b.dataset.tab); });
     $('setBtn').onclick = () => this.settingsModal();
     $('modeCard').onclick = () => this.modeModal();
+    $('myCard').onclick = () => { this.slot = 'banner'; this.showTab('locker'); };
     $('playBtn').onclick = () => this.play();
     $('daily').onclick = () => { const p = Account.profile; p.lastReward = todayKey(); p.coins += 150; Account.save(); Sfx.play('buy'); this.toast('🎁 +150 Kart Coins! Come back tomorrow for more.'); this.refreshTop(); };
     $('resOk').onclick = () => this.exitRace();
@@ -272,6 +273,7 @@ const App = window.App = {
     $('playBtn').className = 'btn ' + (member && Net.ready ? 'r' : 'y'); $('playBtn').style.fontSize = notReady ? '22px' : ''; $('playBtn').style.opacity = notReady ? 0.6 : 1;
     $('modeCard').disabled = !!member;
     this.refreshTop();
+    { const mc = $('myCard'); if (mc) mc.innerHTML = this.myCard(true); }
   },
   modeModal() {
     const inParty = Net.party && Net.members().length > 1;
@@ -289,13 +291,13 @@ const App = window.App = {
     if (multi) { const nr = Net.members().filter(m => !m.sameTab && !m.presence.ready); if (nr.length) { this.toast('Everyone has to ready up first. Waiting for: <b>' + nr.map(m => esc(safeTag(m.presence.tag))).join(', ') + '</b>'); return; } }
     const s = this.sel; let mode = s.mode; if (multi && mode === 'tt') mode = 'gp';
     const seed = (Math.random() * 1e9) | 0; const r = rng(seed);
-    const humans = multi ? Net.members().slice(0, 8).map(m => ({ id: m.peer, tag: m.sameTab ? Account.profile.tag : safeTag(m.presence.tag), cos: m.sameTab ? packCos(Account.profile.equip) : m.presence.cos })) : [{ id: 'me', tag: Account.profile.tag, cos: packCos(Account.profile.equip) }];
+    const humans = multi ? Net.members().slice(0, 8).map(m => ({ id: m.peer, tag: m.sameTab ? Account.profile.tag : safeTag(m.presence.tag), lvl: m.sameTab ? Account.level : m.presence.lvl | 0, cos: m.sameTab ? packCos(Account.profile.equip) : m.presence.cos })) : [{ id: 'me', tag: Account.profile.tag, lvl: Account.level, cos: packCos(Account.profile.equip) }];
     const nb = mode === 'tt' || humans.length >= 4 ? 0 : Math.max(0, 8 - humans.length); // 8 racers max; parties of 4+ race without bots
     const names = BOT_NAMES.slice().sort(() => r() - 0.5);
     const bots = [];
     for (let i = 0; i < nb; i++) {
-      const cos = {}; for (const sl of SLOTS) { const pool = CATALOG.filter(c => c.slot === sl.id); cos[sl.id] = pool[Math.floor(r() * pool.length)].id; }
-      bots.push({ id: 'b' + i, name: names[i % names.length], cos: packCos(cos), skill: +(0.9 + r() * 0.1).toFixed(3) });
+      const cos = {}; for (const sl of SLOTS) { const pool = CATALOG.filter(c => c.slot === sl.id && !c.ex); cos[sl.id] = pool[Math.floor(r() * pool.length)].id; }
+      bots.push({ id: 'b' + i, lvl: 1 + Math.floor(r() * r() * 90), name: names[i % names.length], cos: packCos(cos), skill: +(0.9 + r() * 0.1).toFixed(3) });
     }
     const cfg = { rid: 'r' + Date.now().toString(36), track: s.track, mode, seed, roster: humans, bots, hostPeer: multi ? Net.myPeer : 'me', multi: !!multi };
     if (multi) Net.startRace(cfg);
@@ -307,8 +309,8 @@ const App = window.App = {
     this.lastCfg = cfg;
     const myId = cfg.multi ? Net.myPeer : 'me';
     const racers = [
-      ...cfg.bots.map(b => ({ id: String(b.id), name: safeTag(b.name), cos: unpackCos(b.cos), type: 'bot', skill: clamp(+b.skill || 0.95, 0.85, 1.02) })),
-      ...cfg.roster.map(h => ({ id: String(h.id), name: safeTag(h.tag), cos: unpackCos(h.cos), type: h.id === myId ? 'local' : 'remote' })),
+      ...cfg.bots.map(b => ({ id: String(b.id), name: safeTag(b.name), cos: unpackCos(b.cos), lvl: b.lvl | 0, type: 'bot', skill: clamp(+b.skill || 0.95, 0.85, 1.02) })),
+      ...cfg.roster.map(h => ({ id: String(h.id), name: safeTag(h.tag), cos: unpackCos(h.cos), lvl: h.lvl | 0, type: h.id === myId ? 'local' : 'remote' })),
     ];
     if (!racers.some(r => r.type === 'local')) return;
     $('ui').classList.add('hidden'); $('results').classList.add('hidden');
@@ -329,7 +331,7 @@ const App = window.App = {
     const titleTxt = res.mode === 'ko' ? (res.place === 1 ? 'Victory Royale!' : `#${res.place}`) : res.mode === 'tt' ? (res.newBest ? 'New record!' : 'Time trial') : (res.place === 1 ? 'Victory!' : ORD(res.place) + ' place');
     $('resTitle').textContent = titleTxt;
     $('resSub').textContent = `${MODES[res.mode].name} · ${TRACKS.find(t => t.id === res.track).name}${res.time ? ' · ' + fmtTime(res.time) : ''}`;
-    $('resRows').innerHTML = res.rows.map(r => `<div class="rrow ${r.local ? 'me' : ''}"><span>${r.place}</span><span>${esc(r.name)}${r.human && !r.local ? ' 🎮' : ''}</span><span>${r.time ? fmtTime(r.time) : r.elim ? 'KO' : '—'}</span></div>`).join('');
+    $('resRows').innerHTML = res.rows.map(r => `<div class="rrow ${r.local ? 'me' : ''}" style="background:linear-gradient(rgba(5,10,40,${r.local ? .3 : .55}),rgba(5,10,40,${r.local ? .3 : .55})),${(CAT[(r.cos || {}).banner] || CAT.bn_blue).css}"><span>${r.place}</span><span>${esc(r.name)}${r.human && !r.local ? ' 🎮' : ''} <small style="font-size:10px;font-weight:900;text-transform:uppercase;color:${(CAT[(r.cos || {}).title] || CAT.ti_rookie).color}">${esc((CAT[(r.cos || {}).title] || CAT.ti_rookie).name)}</small></span><span>${r.time ? fmtTime(r.time) : r.elim ? 'KO' : '—'}</span></div>`).join('');
     $('resRewards').innerHTML = `<div class="reward"><span class="coin"></span>+${rw.coins} Kart Coins</div><div class="reward">⭐ +${rw.xp} XP</div>` +
       (rw.levelUp ? `<div class="reward" style="background:rgba(255,225,74,.25)">🎉 Level ${rw.levelUp}!</div>` : '') +
       rw.unlocked.map(u => `<div class="reward" style="background:rgba(194,92,255,.3)">🔓 Turbo Pass reward: ${esc(u)}</div>`).join('') +
@@ -408,7 +410,7 @@ const App = window.App = {
       const mem = Net.members(); const lead = Net.leader();
       el.innerHTML = `<div class="row" style="justify-content:space-between"><div><div class="muted">Party code</div><div class="code">${esc(Net.code)}</div></div><button class="btn sm" id="cpCode">Copy code</button></div>
         <button class="btn b" style="width:100%;margin-top:8px" id="cpLink">🔗 Copy invite link</button>
-        <div class="sep"></div>${mem.map(m => `<div class="mem"><div class="av" style="background:${m.sameTab ? '#ffc928;color:#2a1a00' : '#2a7fff'}">${m === lead ? '👑' : esc(safeTag(m.presence.tag)[0])}</div><div class="nm">${esc(m.sameTab ? Account.profile.tag : safeTag(m.presence.tag))}${m.sameTab ? ' (you)' : ''}</div><div class="st ${m === lead || m.presence.ready ? 'rdy' : ''}">${m === lead ? 'LEADER' : m.presence.race && m.presence.k ? 'RACING' : m.presence.ready ? 'READY' : 'NOT READY'}</div></div>`).join('')}
+        <div class="sep"></div>${mem.map(m => `<div class="mem" data-peer="${esc(m.peer)}" style="${this.memStyle(m)}"><div class="av" style="background:${m.sameTab ? '#ffc928;color:#2a1a00' : '#2a7fff'}">${m === lead ? '👑' : esc(safeTag(m.presence.tag)[0])}</div><div class="nm">${esc(m.sameTab ? Account.profile.tag : safeTag(m.presence.tag))}${m.sameTab ? ' (you)' : ''}${this.memTitle(m)}</div><div class="st ${m === lead || m.presence.ready ? 'rdy' : ''}">${m === lead ? 'LEADER' : m.presence.race && m.presence.k ? 'RACING' : m.presence.ready ? 'READY' : 'NOT READY'}</div></div>`).join('')}
         <p class="muted" style="margin:6px 0">${mem.length}/8 · ${Net.isLeader() ? (mem.length > 1 ? 'You pick the mode and start the race once everyone is ready. Up to 8 racers. Bots fill empty spots unless 4 or more players are in the party.' : 'Waiting for friends — send them the invite link. You can still race solo.') : 'Waiting for the leader to start.'}</p>
         <button class="btn sm r" id="lvParty">Leave party</button>`;
       $('lvParty').onclick = () => { Net.leaveParty(); this.sessionPts = 0; this.sessionWins = 0; this.toast('Left the party'); this.lobbyKarts(); this.renderPlay(); };
@@ -416,8 +418,29 @@ const App = window.App = {
       $('cpCode').onclick = () => copy(Net.code, 'Code copied!');
       $('cpLink').onclick = () => copy(Net.inviteLink(), 'Invite link copied — send it to your friends!');
     }
+    el.querySelectorAll('[data-peer]').forEach(x => x.onclick = () => this.cardModal(x.dataset.peer));
     if (this.tab === 'play' && !this.race) this.renderPlay();
     if (this.tab === 'leaderboard') this.renderLeaderboard();
+  },
+  // ---------------- player cards ----------------
+  cardHTML(o) { // o: { tag, lvl, cos (equip object), wins?, me? }
+    const cos = o.cos || {}, bn = CAT[cos.banner] && CAT[cos.banner].slot === 'banner' ? CAT[cos.banner] : CAT.bn_blue, ti = CAT[cos.title] && CAT[cos.title].slot === 'title' ? CAT[cos.title] : CAT.ti_rookie, lvl = o.lvl | 0;
+    const badge = lvl >= 400 ? '💎' : lvl > 100 ? '⭐' : (o.wins | 0) >= 25 ? '🏆' : '';
+    return `<div class="pcard${bn.anim ? ' shine' : ''}${o.me ? ' me' : ''}${o.big ? ' big' : ''}" style="background:${bn.css}"><div class="pc-lvl${lvl > 100 ? ' pr' : ''}">${lvl || '?'}</div><div class="pc-txt"><b>${esc(o.tag || 'Racer')}</b><i style="color:${ti.color || '#fff'}">${esc(ti.name)}</i></div>${badge ? `<span class="pc-badge">${badge}</span>` : ''}${o.wins !== undefined ? `<span class="pc-wins">🏆 ${o.wins | 0}</span>` : ''}</div>`;
+  },
+  myCard(big) { const p = Account.profile; return this.cardHTML({ tag: p.tag || 'You', lvl: Account.level, cos: p.equip, wins: p.stats.wins, me: true, big }); },
+  memStyle(m) { const cos = m.sameTab ? Account.profile.equip : unpackCos(m.presence.cos), bn = CAT[cos.banner] || CAT.bn_blue; return `background:linear-gradient(rgba(5,10,40,.45),rgba(5,10,40,.45)),${bn.css};cursor:pointer`; },
+  memTitle(m) { const cos = m.sameTab ? Account.profile.equip : unpackCos(m.presence.cos), ti = CAT[cos.title] || CAT.ti_rookie; return `<small class="mt" style="color:${ti.color}">${esc(ti.name)}</small>`; },
+  cardModal(peer) {
+    const m = Net.members().find(x => x.peer === peer); if (!m) return; const me = m.sameTab, p = Account.profile;
+    const cos = me ? p.equip : unpackCos(m.presence.cos), wins = me ? p.stats.wins : m.presence.cw | 0, races = me ? p.stats.races : m.presence.cr | 0, lvl = me ? Account.level : m.presence.lvl | 0;
+    const b = this.modal(`<h3>Player card</h3>${this.cardHTML({ tag: me ? p.tag : safeTag(m.presence.tag), lvl, cos, big: true })}
+      <div class="row" style="gap:14px;margin-top:14px;flex-wrap:wrap"><div id="cmKart" style="width:170px;height:170px;border-radius:14px;background:rgba(0,0,0,.25);background-size:contain;background-repeat:no-repeat;background-position:center;flex:none"></div>
+      <div style="flex:1;min-width:180px"><div class="grid" style="grid-template-columns:1fr 1fr;gap:8px">${[['Level', lvl], ['Wins', wins], ['Races', races], ['Win rate', races ? Math.round(wins / races * 100) + '%' : '—']].map(x => `<div style="background:rgba(0,0,0,.25);border-radius:10px;padding:8px 10px"><div class="disp" style="font-size:22px;color:var(--yellow)">${x[1]}</div><div class="muted">${x[0]}</div></div>`).join('')}</div>
+      <p class="muted" style="margin-top:10px">${esc((CAT[cos.body] || {}).name || '')} · ${esc((CAT[cos.wheels] || {}).name || '')} · ${esc((CAT[cos.engine] || {}).name || '')}</p></div></div>
+      <div class="row" style="justify-content:flex-end;margin-top:14px;gap:8px">${me ? '<button class="btn b" id="cmEdit">Edit my card</button>' : ''}<button class="btn y" id="cmOk">Close</button></div>`);
+    this.presetThumb(cos, $('cmKart')); $('cmOk').onclick = () => this.closeModal();
+    if ($('cmEdit')) $('cmEdit').onclick = () => { this.closeModal(); this.slot = 'banner'; this.showTab('locker'); };
   },
   // ---------------- stats ----------------
   statBars(st, cmp) {
@@ -448,6 +471,8 @@ const App = window.App = {
   // ---------------- thumbnails ----------------
   thumbQ: [], thumbs: {},
   thumb(id, el) {
+    { const it0 = CAT[id]; if (it0 && it0.slot === 'banner') { el.style.backgroundImage = 'none'; el.innerHTML = `<div class="bthumb${it0.anim ? ' shine' : ''}" style="background:${it0.css}"></div>`; return; }
+      if (it0 && it0.slot === 'title') { el.style.backgroundImage = 'none'; el.innerHTML = `<span class="tthumb" style="color:${it0.color}">${esc(it0.name)}</span>`; return; } }
     if (this.thumbs[id]) { el.style.backgroundImage = `url(${this.thumbs[id]})`; return; }
     const it = CAT[id];
     if (it.slot === 'engine') { this.thumbs[id] = this.engineIcon(it); el.style.backgroundImage = `url(${this.thumbs[id]})`; return; }
@@ -509,6 +534,7 @@ const App = window.App = {
     hdr.firstChild.textContent = it.name; hdr.lastChild.textContent = it.stats ? this.modsText(it) + (it.desc ? ' — ' + it.desc : '') : (it.desc || RARITY[it.rarity].name + ' ' + SLOTS.find(s => s.id === it.slot).name);
     const tot = document.createElement('div'); tot.innerHTML = `<div class="muted" style="margin:10px 0 4px;font-weight:900;font-size:12px;letter-spacing:.5px">YOUR LOADOUT (KART × WHEELS × ENGINE)</div>${this.statBars(kartStats(p.equip).s)}${kartStats(p.equip).offroad ? '<div class="muted" style="margin-top:4px">✔ Off-road ready — loses much less speed on grass</div>' : ''}`;
     hdr.appendChild(tot);
+    if (this.slot === 'banner' || this.slot === 'title') { tot.innerHTML = `<div class="muted" style="margin:10px 0 6px;font-weight:900;font-size:12px;letter-spacing:.5px">YOUR PLAYER CARD</div>${this.myCard(true)}<div class="muted" style="margin-top:6px">Shown to everyone in your party, on the starting grid and in the results. Get more banners and titles in the Item Shop and Turbo Pass.</div>`; }
     body.appendChild(hdr); body.appendChild(grid);
     if (locked) { const m = document.createElement('p'); m.className = 'muted'; m.style.marginTop = '14px'; m.textContent = `${locked} more ${SLOTS.find(s => s.id === this.slot).name.toLowerCase()} item${locked > 1 ? 's' : ''} to unlock in the Item Shop and Turbo Pass.`; body.appendChild(m); }
   },
@@ -615,19 +641,20 @@ const App = window.App = {
   },
   // ---------------- pass ----------------
   renderPass() {
-    const p = Account.profile, lvl = Account.level, inT = p.xp % PASS_XP;
-    $('passLbl').textContent = lvl > PASS.length ? 'Pass complete! 🏆' : `Tier ${lvl} → ${lvl + 1}`; $('passXp').textContent = `${inT} / ${PASS_XP} XP · ${p.xp.toLocaleString()} total`;
+    const p = Account.profile, lvl = Account.level, inT = lvl >= PASS_MAX ? PASS_XP : p.xp % PASS_XP;
+    $('passLbl').textContent = lvl >= PASS_MAX ? 'Level 400 — max level! 💎' : `Level ${lvl} → ${lvl + 1}${lvl >= 100 ? ' · Prestige' : ''}`; $('passXp').textContent = `${lvl >= PASS_MAX ? PASS_XP : inT} / ${PASS_XP} XP · ${p.xp.toLocaleString()} total`;
     $('passFill').style.width = (inT / PASS_XP * 100) + '%';
     const tr = $('passTrack'); tr.innerHTML = '';
-    PASS.forEach((r, i) => {
-      const t = i + 1, got = t <= lvl; const d = document.createElement('div'); d.className = 'tier' + (got ? ' got' : '') + (t === lvl + 1 ? ' cur' : '');
+    const tierCard = (t, extra) => { const r = PASS[t - 1], got = t <= lvl; const d = document.createElement('div'); d.className = 'tier' + (got ? ' got' : '') + (t === lvl + 1 ? ' cur' : '') + (extra ? ' prest' : '');
       const item = r.item ? CAT[r.item] : null;
       d.innerHTML = `<div class="n">${t}</div><div class="rw" ${item ? `style="background-color:${RARITY[item.rarity].color}33"` : ''}>${item ? '' : '<span class="coin" style="width:46px;height:46px"></span>'}</div><div class="lb"></div>`;
-      d.querySelector('.lb').textContent = item ? item.name : r.coins + ' coins';
-      if (item) this.thumb(item.id, d.querySelector('.rw'));
-      tr.appendChild(d);
-    });
-    const cur = tr.children[Math.min(lvl, PASS.length - 1)]; if (cur) setTimeout(() => tr.scrollLeft = Math.max(0, cur.offsetLeft - 200), 50);
+      d.querySelector('.lb').textContent = item ? item.name + (item.slot === 'banner' ? ' banner' : item.slot === 'title' ? ' title' : '') : r.coins + ' coins';
+      if (item) this.thumb(item.id, d.querySelector('.rw')); return d; };
+    for (let t = 1; t <= 100; t++) tr.appendChild(tierCard(t));
+    const cur = tr.children[Math.min(lvl, 99)]; if (cur) setTimeout(() => tr.scrollLeft = Math.max(0, cur.offsetLeft - 200), 50);
+    let pz = $('passPrest'); if (!pz) { pz = document.createElement('div'); pz.id = 'passPrest'; tr.parentElement.appendChild(pz); }
+    pz.innerHTML = `<div class="sec">Prestige · levels 101–400</div><p class="muted" style="margin-bottom:10px">After level 100 every level gives 100 coins, and every 50 levels unlocks an exclusive <b>Prime</b> version of a Turbo Pass reward. The level cap is 400.</p><div id="prestRow" style="display:flex;gap:10px;flex-wrap:wrap"></div>`;
+    for (const t of PASS_PRESTIGE) $('prestRow').appendChild(tierCard(t, true));
   },
   // ---------------- challenges ----------------
   renderChallenges() {

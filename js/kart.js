@@ -36,7 +36,7 @@ const KartFactory = (() => {
     const key = [cos.body, cos.paint, cos.wheels, cos.driver].join('|');
     const cache = cacheFor(R);
     if (cache.has(key)) return cache.get(key);
-    const body = (CAT[cos.body] || CAT.b_classic).kind;
+    let body = (CAT[cos.body] || CAT.b_classic).kind; const primeBody = body === 'hoverx'; if (primeBody) body = 'hover';
     const P = paintCols(cos.paint);
     const g = new Geo();
     let wheelPos = [[-0.85, 0.38, 0.9], [0.85, 0.38, 0.9], [-0.85, 0.38, -0.85], [0.85, 0.38, -0.85]];
@@ -190,6 +190,7 @@ const KartFactory = (() => {
       g.sphere(0.13, 6, 4, hexc(0xfff6c0, 0.9), -0.55, 0.7, 1.45); g.sphere(0.13, 6, 4, hexc(0xfff6c0, 0.9), 0.55, 0.7, 1.45);
       wheelPos = [[-0.85, 0.38, 1.0], [0.85, 0.38, 1.0], [-0.85, 0.38, -0.95], [0.85, 0.38, -0.95]]; drvZ = -0.4;
     }
+    if (primeBody) { for (const s of [-1, 1]) { g.rbox(0.12, 0.5, 1.6, hexc(0xfff2a8, 1), s * 1.12, 0.75, -0.2); g.sphere(0.16, 6, 4, hexc(0xffe14a, 1), s * 0.85, 0.9, 1.25); } g.rbox(1.9, 0.08, 0.12, hexc(0xfff2a8, 1), 0, 1.26, -1.25); }
     driver(g, cos.driver, drvZ);
     // wheels
     const wk = (CAT[cos.wheels] || CAT.w_stock).kind;
@@ -205,12 +206,12 @@ const KartFactory = (() => {
       if (wk === 'knobby') for (let k = 0; k < 10; k++) { const an = k / 10 * Math.PI * 2; wg.box(ww + 0.04, 0.09, 0.09, BLACK, 0, Math.cos(an) * wr, Math.sin(an) * wr); }
       if (wk === 'wood') for (let k = 0; k < 6; k++) { wg.push(M4.trs(0, 0, 0, 0, k / 6 * Math.PI, 0)); wg.box(ww * 0.4, wr * 1.8, 0.05, hexc(0x8a5f36), 0, 0, 0); wg.pop(); }
       if (wk === 'slick') wg.cyl(wr * 1.002, 0.05, 12, hexc(0xffd23a, 0.4), 'x', 0, 0, 0);
-      const rim = wk === 'cyber' ? hexc(0xc25cff, 1) : wk === 'wood' ? hexc(0x8a5f36) : wk === 'slick' ? hexc(0x2a2f3a) : wk === 'mini' ? hexc(0xffd23a) : wk === 'knobby' ? hexc(0x4a5560) : wk === 'chrome' ? hexc(0xe8eef4, 0.35) : wk === 'neon' ? hexc(0x2bf0ff, 1) : wk === 'gold' ? hexc(0xffc928, 0.3) : wk === 'candy' ? hexc(0xff4fa3, 0.2) : wk === 'monster' ? hexc(0xff3b3b) : hexc(0xb8bec6);
+      const rim = wk === 'prime' ? hexc(0xfff2a8, 1) : wk === 'turbine' ? hexc(0x9fb4c8, 0.4) : wk === 'cyber' ? hexc(0xc25cff, 1) : wk === 'wood' ? hexc(0x8a5f36) : wk === 'slick' ? hexc(0x2a2f3a) : wk === 'mini' ? hexc(0xffd23a) : wk === 'knobby' ? hexc(0x4a5560) : wk === 'chrome' ? hexc(0xe8eef4, 0.35) : wk === 'neon' ? hexc(0x2bf0ff, 1) : wk === 'gold' ? hexc(0xffc928, 0.3) : wk === 'candy' ? hexc(0xff4fa3, 0.2) : wk === 'monster' ? hexc(0xff3b3b) : hexc(0xb8bec6);
       wg.cyl(wr * 0.6, ww + 0.04, 14, rim, 'x', 0, 0, 0, rim);
       if (wk === 'candy') wg.box(ww + 0.06, wr * 1.1, 0.1, hexc(0xffffff, 0.3), 0, 0, 0);
       else wg.box(ww + 0.06, wr * 1.1, 0.08, wk === 'neon' ? hexc(0xff2bd6, 1) : shade(rim, 0.6), 0, 0, 0);
     }
-    const out = { body: R.upload(g), wheel: wheelPos.length ? R.upload(wg) : null, wheelPos, wr, hover: body === 'hover' || body === 'ufo', bike: wheelPos.length === 2, drvH: 1.9 };
+    const out = { body: R.upload(g), wheel: wheelPos.length ? R.upload(wg) : null, wheelPos, wr, hover: body === 'hover' || body === 'ufo', prime: primeBody, bike: wheelPos.length === 2, drvH: 1.9 };
     cache.set(key, out);
     return out;
   }
