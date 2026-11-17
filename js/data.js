@@ -219,7 +219,7 @@ const WEEK_CHALLENGES = [
   { id: 'w_hard3', text: 'Win 3 races with bots on Hard', goal: 3, stat: 'hardwin' },
   { id: 'w_nohit', text: 'Win a race without getting hit once', goal: 1, stat: 'nohitwin' },
   { id: 'w_purple25', text: 'Land 25 Ultra (purple) drift boosts', goal: 25, stat: 'purple' },
-  { id: 'w_alltracks', text: 'Win on all 4 tracks', goal: 4, stat: 'trackwin' },
+  { id: 'w_alltracks', text: 'Win on 4 different maps', goal: 4, stat: 'trackwin' },
   { id: 'w_hit40', text: 'Hit rivals with items 40 times', goal: 40, stat: 'rockethit' },
   { id: 'w_ko2', text: 'Win 2 Knockouts (Victory Royale)', goal: 2, stat: 'kowin' },
   { id: 'w_finish25', text: 'Finish 25 races', goal: 25, stat: 'finish' },
