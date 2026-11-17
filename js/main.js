@@ -632,7 +632,7 @@ const App = window.App = {
   },
   // ---------------- shop ----------------
   shopToday() {
-    const r = rng(hashStr('shop-' + todayKey()));
+    const r = rng(hashStr('shop-r2-' + todayKey()));
     const pool = CATALOG.filter(i => !i.def && !i.pass).map(i => ({ i, k: r() })).sort((a, b) => a.k - b.k).map(o => o.i);
     const feat = pool.filter(i => i.rarity === 'legendary' || i.rarity === 'epic').slice(0, 3);
     const daily = pool.filter(i => !feat.includes(i)).slice(0, 12);
