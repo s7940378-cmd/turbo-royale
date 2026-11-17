@@ -267,8 +267,33 @@ const TRACKS = [
     id: 'neon', name: 'Neon Nights', theme: 'neon', width: 24, scale: 1.0, laps: 3,
     pts: [[0, 0, 0], [170, 0, 0], [225, 45, 0], [225, 160, 4], [180, 205, 6], [70, 205, 6], [20, 250, 4], [20, 320, 0], [-25, 365, 0], [-160, 365, 0], [-210, 320, 3], [-210, 50, 3], [-160, 0, 0]],
   },
+  {
+    id: 'jungle', name: 'Jungle Jamboree', theme: 'jungle', width: 24, scale: 1.0, laps: 3,
+    pts: [[0, 0, 0], [150, 20, 2], [250, -30, 6], [330, 70, 10], [280, 190, 14], [170, 160, 8], [110, 260, 4], [-20, 300, 2], [-140, 230, 6], [-280, 260, 10], [-320, 120, 6], [-200, 70, 2], [-160, -50, 0]],
+  },
+  {
+    id: 'maple', name: 'Maple Mile', theme: 'autumn', width: 24, scale: 1.0, laps: 3,
+    pts: [[0, 0, 0], [160, -20, 2], [290, 30, 8], [310, 160, 14], [200, 230, 18], [60, 180, 12], [0, 270, 8], [-130, 320, 4], [-260, 240, 6], [-250, 110, 10], [-120, 120, 6], [-180, -30, 0]],
+  },
+  {
+    id: 'sixseven', name: 'Six Seven Speedway', theme: 'sixseven', width: 25, scale: 1.0, laps: 3, meme: true,
+    pts: [[0, 0, 0], [180, 0, 2], [260, 70, 6], [200, 160, 10], [260, 260, 6], [130, 330, 2], [10, 250, 0], [-80, 330, 4], [-220, 290, 8], [-260, 160, 6], [-170, 90, 2], [-220, -20, 0]],
+  },
+  {
+    id: 'stonks', name: 'Stonks Speedway', theme: 'stonks', width: 24, scale: 1.0, laps: 3, meme: true,
+    pts: [[0, 0, 0], [140, 0, 4], [220, 60, 12], [320, 20, 20], [340, 150, 28], [220, 220, 18], [120, 180, 8], [60, 290, 4], [-90, 300, 10], [-230, 230, 16], [-300, 100, 8], [-190, 20, 2]],
+  },
+  {
+    id: 'flush', name: 'Royal Flush Raceway', theme: 'toilet', width: 24, scale: 1.0, laps: 3, meme: true,
+    pts: [[0, 0, 0], [170, -10, 0], [270, 60, 2], [250, 180, 6], [140, 200, 4], [100, 300, 2], [-40, 320, 0], [-150, 250, 4], [-290, 280, 6], [-310, 140, 3], [-200, 60, 0], [-170, -40, 0]],
+  },
 ];
 const THEMES = {
+  jungle: { sky: [0.5, 0.8, 0.85], fog: [0.62, 0.84, 0.78], fogN: 120, fogF: 480, ground: 0x2f8a3a, ground2: 0x1f6b2c, hill: 0x3f7a3a, road: 0x5a5148, wall: [0xffb21c, 0x2a7a3a], light: { dir: [0.35, 0.8, 0.35], sky: [0.58, 0.7, 0.66], ground: [0.32, 0.36, 0.26], sun: [0.75, 0.72, 0.58] }, props: 'jungle', mtn: 0x2f6b3f, noCap: true },
+  autumn: { sky: [1.0, 0.78, 0.55], fog: [1.0, 0.85, 0.7], fogN: 140, fogF: 520, ground: 0xc98a3a, ground2: 0xa86a2a, hill: 0x8a6a3a, road: 0x50525a, wall: [0xe8333a, 0xffe9c0], skyTop: 0x4a7ad8, light: { dir: [0.5, 0.7, 0.2], sky: [0.7, 0.62, 0.55], ground: [0.45, 0.35, 0.25], sun: [0.8, 0.68, 0.5] }, props: 'autumn', mtn: 0x8a5a3a },
+  sixseven: { sky: [0.55, 0.35, 0.85], fog: [0.75, 0.55, 0.95], fogN: 140, fogF: 520, ground: 0x5a3aa8, ground2: 0x4a2a90, hill: 0x7a4ac8, road: 0x2a2440, wall: [0xffc928, 0x8a3aff], skyTop: 0x1a0a50, light: { dir: [0.35, 0.8, 0.3], sky: [0.62, 0.52, 0.8], ground: [0.32, 0.22, 0.42], sun: [0.75, 0.68, 0.6] }, props: 'sixseven', mtn: 0x3a1f7a, noCap: true },
+  stonks: { sky: [0.05, 0.1, 0.2], fog: [0.06, 0.14, 0.24], fogN: 110, fogF: 460, ground: 0x0e1c2e, ground2: 0x122438, hill: 0x16304a, road: 0x22262e, wall: [0x1fd65f, 0xff3b4a], skyTop: 0x020814, light: { dir: [0.25, 0.9, 0.3], sky: [0.4, 0.48, 0.58], ground: [0.16, 0.22, 0.28], sun: [0.5, 0.55, 0.55] }, props: 'stonks', neon: true, grid: 0x1fd65f },
+  toilet: { sky: [0.75, 0.9, 1.0], fog: [0.86, 0.95, 1.0], fogN: 150, fogF: 540, ground: 0xf4f8fb, ground2: 0x9fd2ec, hill: 0xd6e8f2, road: 0x5a6a7a, wall: [0x2a9fff, 0xffffff], skyTop: 0x6ab4ff, light: { dir: [0.35, 0.82, 0.3], sky: [0.72, 0.78, 0.84], ground: [0.5, 0.52, 0.55], sun: [0.72, 0.7, 0.66] }, props: 'toilet', mtn: 0xbfe0f2, noCap: true, flat: true },
   volcano: { sky: [0.35, 0.18, 0.15], fog: [0.45, 0.22, 0.16], fogN: 110, fogF: 470, ground: 0x3a2e2e, ground2: 0x4a3530, hill: 0x2a2020, road: 0x3d3d44, wall: [0xff5a1f, 0x2a2a2a], skyTop: 0x2a0f12, capCol: 0xff5a1f, light: { dir: [0.4, 0.75, 0.3], sky: [0.62, 0.5, 0.48], ground: [0.5, 0.26, 0.18], sun: [0.85, 0.58, 0.4] }, props: 'lava' },
   candy: { sky: [1.0, 0.75, 0.9], fog: [1.0, 0.85, 0.94], fogN: 150, fogF: 540, ground: 0xffc4e1, ground2: 0xffa8d4, hill: 0xc79bff, road: 0x7d5aa8, wall: [0xff5aa8, 0xffffff], skyTop: 0x7ab8ff, light: { dir: [0.35, 0.82, 0.3], sky: [0.7, 0.68, 0.78], ground: [0.45, 0.36, 0.42], sun: [0.75, 0.7, 0.62] }, props: 'candy' },
   beach: { sky: [0.45, 0.8, 1.0], fog: [0.75, 0.92, 1.0], fogN: 150, fogF: 540, ground: 0xf2dc9a, ground2: 0xe6c77a, hill: 0x6fbf5f, road: 0x5a6068, wall: [0x2ad0c8, 0xffffff], light: { dir: [0.35, 0.82, 0.25], sky: [0.66, 0.72, 0.8], ground: [0.45, 0.42, 0.32], sun: [0.8, 0.74, 0.6] }, props: 'palms' },

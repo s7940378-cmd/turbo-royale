@@ -340,6 +340,13 @@ class Race {
       if (si === 0 && al < 0) continue;
       if (Math.abs(lb) < b.half + 0.5 && (latM * b.side > 1.5 || Math.abs(latM) > t.half - 1 || Math.abs(latM) > Math.abs(lb) + 2.5)) { r.seg = b; r.sIdx = si; r.latB = lb; break; }
     }
+    // off the main road but inside a branch's walls (e.g. on its curb or pushed to its edge): that branch is the road under us
+    if (!r.seg && t.branches && Math.abs(latM) > t.half + 1.5) for (const b of t.branches) {
+      if (!b.near(r.mIdx, 30)) continue;
+      const si = b.nearest(r.x, r.z), lb = b.lateral(si, r.x, r.z), al = b.along(si, r.x, r.z);
+      if ((si === 0 && al < 0) || (si >= b.N - 1 && al > 0)) continue;
+      if (Math.abs(lb) < b.wallD + 0.5 && Math.abs(lb) < Math.abs(latM)) { r.seg = b; r.sIdx = si; r.latB = lb; break; }
+    }
     r.latM = latM;
     if (r.seg) { r.idx = r.seg.mapIdx(r.sIdx); r.lat = r.latB; } else { r.idx = r.mIdx; r.lat = latM; }
   }

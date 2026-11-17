@@ -154,12 +154,12 @@ class Track {
       const sn = this.terrainBase(x, z); const d = sn[0]; const base = sn[1];
       const t = clamp((d - this.wallD - 4) / 70, 0, 1); const s = t * t * (3 - 2 * t);
       const n = vnoise(x / 60, z / 60, seed) * 0.65 + vnoise(x / 22, z / 22, seed + 3) * 0.35;
-      const hill = (this.def.theme === 'neon' ? 4 : 34) * n * s + s * (this.def.theme === 'neon' ? 0 : 6);
+      const flat = T.neon || T.flat; const hill = (flat ? 4 : 34) * n * s + s * (flat ? 0 : 6);
       H[zi * (RES + 1) + xi] = base + hill - (this.def.theme === 'neon' ? 0 : 0) ; D[zi * (RES + 1) + xi] = d;
     }
     this.terrain = { x0, z0, cw, ch, RES, H, D };
     const c1 = hexc(T.ground), c2 = hexc(T.ground2), c3 = hexc(T.hill);
-    const snowCap = this.def.theme !== 'neon';
+    const snowCap = !T.neon && !T.noCap;
     const data = new Float32Array(RES * RES * 6 * 12); let o = 0;
     const vh = (xi, zi) => H[zi * (RES + 1) + xi];
     const put = (xi, zi) => {
@@ -171,6 +171,8 @@ class Track {
       const hRel = y - (this.py[0] || 0);
       if (d > this.wallD + 10) col = mixc(col, c3, clamp((hRel - 6) / 20, 0, 1) * 0.8);
       if (snowCap && hRel > 26) col = mixc(col, hexc(T.capCol || 0xffffff, T.capCol ? 0.7 : 0), clamp((hRel - 26) / 8, 0, 1));
+      if (T.tiles && d > this.wallD + 2) { const ti = (Math.floor(x / 7) + Math.floor(z / 7)) & 1; col = ti ? hexc(T.ground) : hexc(T.ground2); }
+      if (T.grid && d > this.wallD + 3) { const gx = Math.abs(((x / 14) % 1 + 1) % 1 - 0.5) < 0.05 || Math.abs(((z / 14) % 1 + 1) % 1 - 0.5) < 0.05; if (gx) col = hexc(T.grid, T.neon ? 0.7 : 0.3); }
       if (this.def.theme === 'neon') { const gx = Math.abs(((x / 12) % 1 + 1) % 1 - 0.5) < 0.04 || Math.abs(((z / 12) % 1 + 1) % 1 - 0.5) < 0.04; if (gx && d > this.wallD + 3) col = hexc(0x6a2cff, 0.7); }
       data.set([x, y, z, nx, ny, nz, col[0], col[1], col[2], col[3] || 0, 0, 0], o); o += 12;
     };
@@ -246,6 +248,30 @@ class Track {
           for (let k = 0; k < 7; k++) { const a = k / 7 * Math.PI * 2; g.push(M4.trs(1.1 + Math.cos(a) * 1.5, 6.3, Math.sin(a) * 1.5, -a + Math.PI / 2, 0.45, 0)); g.box(0.7, 0.08, 3.2, lc); g.pop(); } g.sphere(0.3, 5, 4, hexc(0x6b4a2a), 1.1, 6.1, 0.3); }
         else if (q < 0.8) { const uc = hexc([0xff5a5a, 0x2a7fff, 0xffd23a, 0xff7ac8][r() * 4 | 0]); g.cyl(0.06, 2.6, 4, hexc(0xffffff), 'y', 0, 1.3, 0); g.cone(2.0, 0.8, 8, uc, 0, 2.3, 0); g.box(0.7, 0.25, 1.8, hexc(0xffffff), 1.2, 0.3, 0); }
         else { const rc = mixc(hexc(0x9a8f80), hexc(0xc9bfae), r()); g.sphere(1.6 + r() * 1.6, 6, 4, rc, 0, 0.4, 0, 0.7); }
+      } else if (T.props === 'jungle') {
+        const q = r();
+        if (q < 0.55) { g.cyl(0.6, 7, 6, hexc(0x6b4a2a), 'y', 0, 3.5, 0); const lc = mixc(hexc(0x1f7a2a), hexc(0x4fb83a), r()); g.sphere(3.6, 8, 5, lc, 0, 7.6, 0, 0.6); g.sphere(2.6, 7, 4, shade(lc, 1.12), 1.6, 8.4, 0.8, 0.6); for (let k = 0; k < 4; k++) { const a = k * 1.57 + 0.4; g.cyl(0.06, 3.5, 3, hexc(0x3f8a2a), 'y', Math.cos(a) * 2.4, 4.6, Math.sin(a) * 2.4); } }
+        else if (q < 0.85) { const fc = mixc(hexc(0x2f9a3a), hexc(0x6fd04a), r()); for (let k = 0; k < 6; k++) { const a = k / 6 * 6.28; g.push(M4.trs(Math.cos(a) * 0.6, 0.4, Math.sin(a) * 0.6, -a, 0.9, 0)); g.box(0.6, 0.06, 2.4, fc); g.pop(); } }
+        else { const rc = mixc(hexc(0x6a6a5a), hexc(0x8a8a70), r()); g.sphere(1.8 + r() * 1.5, 6, 4, rc, 0, 0.4, 0, 0.7); g.sphere(1.3, 6, 3, hexc(0x3f9a3a), 0.3, 1.3, 0.2, 0.35); }
+      } else if (T.props === 'autumn') {
+        const q = r();
+        if (q < 0.7) { g.cyl(0.42, 3.4, 6, hexc(0x5a3a22), 'y', 0, 1.7, 0); const lc = hexc([0xe8502a, 0xffa21c, 0xffd23a, 0xc8322a][r() * 4 | 0]); g.sphere(2.5, 8, 5, lc, 0, 4.8, 0); g.sphere(1.8, 7, 4, shade(lc, 1.1), 0.9, 6.0, 0.4); g.sphere(1.5, 6, 4, shade(lc, 0.9), -1.0, 4.2, -0.6); }
+        else if (q < 0.85) { g.sphere(0.9, 8, 5, hexc(0xff7a1c), 0, 0.6, 0, 0.75); g.cyl(0.1, 0.4, 4, hexc(0x3f6a2a), 'y', 0, 1.3, 0); g.sphere(0.6, 7, 4, hexc(0xff8a2c), 1.3, 0.45, 0.4, 0.75); }
+        else { g.cyl(1.3, 1.6, 10, hexc(0xe8c86a), 'y', 0, 0.8, 0); g.cyl(1.32, 0.12, 10, hexc(0xc89a3a), 'y', 0, 0.9, 0); }
+      } else if (T.props === 'sixseven') {
+        const q = r();
+        if (q < 0.55) { this._digit(g, r() < 0.5 ? 6 : 7, 0, 0, 0, 0.5 + r() * 0.5, hexc(r() < 0.5 ? 0xffc928 : 0xff5ad0, 0.25)); }
+        else if (q < 0.8) { const cc = hexc([0x8a3aff, 0xc25cff, 0x5a7aff][r() * 3 | 0], 0.35); g.cone(1.2, 5 + r() * 4, 5, cc, 0, 0, 0); g.cone(0.8, 3, 5, cc, 1.3, 0, 0.4); }
+        else { for (let k = 0; k < 3; k++) g.box(1.6, 1.6, 1.6, hexc([0xffc928, 0xff5ad0, 0x2bf0ff][k], 0.3), (k - 1) * 2, 0.8 + (k === 1 ? 1.6 : 0), 0); }
+      } else if (T.props === 'stonks') {
+        if (r() < 0.75) { const up = r() < 0.7, hh = 3 + r() * 14, cc = hexc(up ? 0x1fd65f : 0xff3b4a, 0.55); g.box(2.2, hh, 2.2, cc, 0, hh / 2 + 1, 0); g.box(0.3, hh + 4, 0.3, cc, 0, (hh + 4) / 2 - 1 + 1, 0); }
+        else { for (let k = 0; k < 5; k++) g.cyl(1.4, 0.35, 14, hexc(0xffc928, 0.35), 'y', 0, 0.18 + k * 0.37, 0); }
+      } else if (T.props === 'toilet') {
+        const q = r();
+        if (q < 0.35) this._toilet(g, 0, 0, 0, 1 + r());
+        else if (q < 0.6) this._duck(g, 0, 0, 0, 1 + r() * 1.5);
+        else if (q < 0.8) { const s2 = 1 + r(); g.cyl(1.1 * s2, 2.2 * s2, 14, hexc(0xffffff, 0.1), 'y', 0, 1.1 * s2, 0); g.cyl(0.45 * s2, 2.25 * s2, 10, hexc(0x9a8a7a), 'y', 0, 1.1 * s2, 0); g.push(M4.trs(1.1 * s2, 0.04, 0.6, 0.3, 0, 0)); g.box(0.9 * s2, 0.04, 3 * s2, hexc(0xffffff, 0.1), 0, 0, 1.5 * s2); g.pop(); }
+        else { g.cone(1.0, 0.9, 12, hexc(0xe8333a), 0, 0, 0); g.cyl(0.14, 4, 6, hexc(0xc89a5a), 'y', 0, 2.8, 0); }
       } else if (T.props === 'city') {
         const hgt = 8 + r() * 40, wd = 6 + r() * 8; const bc = mixc(hexc(0x1b1530), hexc(0x2a2350), r());
         g.box(wd, hgt, wd, bc, 0, hgt / 2, 0);
@@ -293,12 +319,44 @@ class Track {
         const x = lerp(B.minx - 60, B.maxx + 60, r()), z = lerp(B.minz - 60, B.maxz + 60, r()), y = 70 + r() * 70, c1 = hexc(cols[r() * cols.length | 0], 0.25), c2 = hexc(cols[r() * cols.length | 0], 0.25);
         g.sphere(9, 10, 7, c1, x, y, z, 1.15); g.cyl(9.05, 3, 10, c2, 'y', x, y, z); g.cyl(1.6, 7, 8, c1, 'y', x, y - 10, z, c1, 6.5); g.box(2.4, 2, 2.4, hexc(0x8a5f36), x, y - 14, z); }
     }
+    // meme maps: giant landmarks you can see from the track
+    if (this.def.meme) {
+      const cx = (B.minx + B.maxx) / 2, cz = (B.minz + B.maxz) / 2, R2 = Math.max(B.maxx - B.minx, B.maxz - B.minz) / 2 + 70;
+      for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2 + 0.3; let x = cx + Math.cos(a) * R2, z = cz + Math.sin(a) * R2; if (this.distAt(x, z) < this.wallD + 30) continue; const y = this.groundHeight(x, z) - 0.5;
+        g.push(M4.trs(x, y, z, Math.atan2(cx - x, cz - z), 0, 0, 1));
+        if (T.props === 'sixseven') { this._digit(g, 6, -7, 0, 0, 3.2, hexc(0xffc928, 0.4)); this._digit(g, 7, 7, 0, 0, 3.2, hexc(0xff5ad0, 0.4)); }
+        else if (T.props === 'stonks') { for (let q = 0; q < 7; q++) { const hh = 8 + q * 7; g.box(5, hh, 5, hexc(0x1fd65f, 0.5), (q - 3) * 7, hh / 2, 0); } g.push(M4.trs(0, 52, 0, 0, 0, -0.75)); g.box(60, 3, 3, hexc(0x1fd65f, 0.8)); g.pop(); g.push(M4.trs(24, 72, 0, 0, 0, -0.75)); g.wedge(12, 12, 3, hexc(0x1fd65f, 0.8), 0, 0, 0, 0); g.pop(); }
+        else if (T.props === 'toilet') { if (k % 2) this._toilet(g, 0, 0, 0, 6); else this._duck(g, 0, 0, 0, 9); }
+        g.pop(); }
+    }
     // distant mountains ring (not in city)
     if (T.props !== 'city') {
       const cx = (B.minx + B.maxx) / 2, cz = (B.minz + B.maxz) / 2, rad = Math.max(B.maxx - B.minx, B.maxz - B.minz) / 2 + 420;
-      for (let k = 0; k < 24; k++) { const a = k / 24 * Math.PI * 2 + r() * 0.2; const hh = 90 + r() * 120; const mc = T.props === 'cactus' ? hexc(0xc77a45) : T.props === 'pines' ? hexc(0x8ea4c0) : hexc(0x5a8a5a); g.cone(120 + r() * 60, hh, 6, mc, cx + Math.cos(a) * rad, -20, cz + Math.sin(a) * rad); g.cone(40, hh * 0.25, 6, hexc(0xffffff), cx + Math.cos(a) * rad, hh * 0.75 - 20, cz + Math.sin(a) * rad); }
+      for (let k = 0; k < 24; k++) { const a = k / 24 * Math.PI * 2 + r() * 0.2; const hh = 90 + r() * 120; const mc = T.mtn ? hexc(T.mtn) : T.props === 'cactus' ? hexc(0xc77a45) : T.props === 'pines' ? hexc(0x8ea4c0) : hexc(0x5a8a5a); g.cone(120 + r() * 60, hh, 6, mc, cx + Math.cos(a) * rad, -20, cz + Math.sin(a) * rad); if (!T.noCap) g.cone(40, hh * 0.25, 6, hexc(0xffffff), cx + Math.cos(a) * rad, hh * 0.75 - 20, cz + Math.sin(a) * rad); }
     }
     return g;
+  }
+  // seven-segment style digit (6 or 7) standing on the ground, s = scale (1 → ~6 m tall)
+  _digit(g, d, x, y, z, s, col) {
+    const W = 3.2 * s, H = 6 * s, t = 0.9 * s, D = 0.9 * s, segs = { 6: 'acdefg', 7: 'abc' }[d] || '';
+    const S = { a: [0, H, W, t], d: [0, 0, W, t], g: [0, H / 2, W, t] };
+    for (const c of segs) {
+      if (S[c]) { const q = S[c]; g.rbox(q[2], q[3], D, col, x, y + q[1] + t / 2, z); continue; }
+      const sx = c === 'b' || c === 'c' ? 1 : -1, top = c === 'b' || c === 'f';
+      g.rbox(t, H / 2 + t * 0.5, D, col, x + sx * (W - t) / 2, y + (top ? H * 0.75 : H * 0.25) + t / 2, z);
+    }
+  }
+  _toilet(g, x, y, z, s) {
+    const W = hexc(0xffffff, 0.12), Sh = hexc(0xdfe8f0, 0.1);
+    g.cyl(0.55 * s, 0.9 * s, 12, Sh, 'y', x, y + 0.45 * s, z + 0.2 * s); g.cyl(0.85 * s, 0.5 * s, 16, W, 'y', x, y + 1.15 * s, z + 0.3 * s);
+    g.cyl(0.62 * s, 0.06 * s, 16, hexc(0x5fb0e8, 0.3), 'y', x, y + 1.42 * s, z + 0.3 * s);
+    g.rbox(1.5 * s, 1.5 * s, 0.6 * s, W, x, y + 1.9 * s, z - 0.75 * s); g.rbox(1.6 * s, 0.14 * s, 0.7 * s, Sh, x, y + 2.7 * s, z - 0.75 * s);
+    g.box(0.3 * s, 0.08 * s, 0.08 * s, hexc(0xc0c8d0, 0.2), x + 0.5 * s, y + 2.4 * s, z - 0.4 * s);
+  }
+  _duck(g, x, y, z, s) {
+    const Y = hexc(0xffd21c, 0.2); g.sphere(1.0 * s, 10, 7, Y, x, y + 0.75 * s, z, 0.75); g.sphere(0.6 * s, 9, 6, Y, x, y + 1.7 * s, z + 0.55 * s);
+    g.sphere(0.28 * s, 7, 4, hexc(0xff7a1c, 0.2), x, y + 1.6 * s, z + 1.12 * s, 0.5); g.sphere(0.4 * s, 7, 4, Y, x, y + 1.05 * s, z - 0.95 * s, 0.6);
+    for (const sx of [-1, 1]) g.sphere(0.09 * s, 5, 3, hexc(0x111111), x + sx * 0.24 * s, y + 1.85 * s, z + 1.05 * s);
   }
   _minimap() {
     const B = this.bounds, S = 150, pad = 10; const sc = (S - pad * 2) / Math.max(B.maxx - B.minx, B.maxz - B.minz);

@@ -62,8 +62,11 @@ const App = window.App = {
     ring(17, 18.2, 0.01, i => E(i % 2 ? 0x15171c : 0xe9edf2), 72); ring(18.2, 19.4, 0.01, i => E(i % 2 ? 0xe9edf2 : 0x15171c), 72);
     ring(19.4, 30, 0, () => E(0x2c313d)); ring(30, 31, 0.02, i => E(i % 2 ? 0xe8333a : 0xffffff), 96); ring(31, 170, -0.02, () => E(0x3f8a4a), 48);
     // backdrop gantry
-    g.rbox(1.6, 14, 1.6, E(0x2b3a6b), -21, 7, -27); g.rbox(1.6, 14, 1.6, E(0x2b3a6b), 21, 7, -27); g.rbox(44, 1.2, 1.8, E(0x2b3a6b), 0, 14, -27);
-    for (let k = -3; k <= 3; k++) g.rbox(1.8, 1.1, 0.5, E(k % 2 ? 0xffe14a : 0x2bf0ff, 1), k * 5.6, 12.7, -26.3);
+    // sign gantry: two posts, a crossbar right on top of the banner and a framed backing board so the sign sits in a solid frame
+    for (const sx of [-1, 1]) { g.rbox(1.3, 12.8, 1.3, E(0x2b3a6b), sx * 16.1, 6.4, -26.6); g.rbox(2.4, 0.5, 2.4, E(0x1d274d), sx * 16.1, 0.25, -26.6); g.rbox(1.6, 0.35, 1.6, E(0xffd23a, 0.5), sx * 16.1, 12.9, -26.6); }
+    g.rbox(33.6, 1.0, 1.4, E(0x2b3a6b), 0, 12.55, -26.6); g.rbox(31.2, 4.6, 0.5, E(0x16204a), 0, 10.05, -26.45);
+    g.rbox(31.2, 0.22, 0.6, E(0xffd23a, 0.7), 0, 7.86, -26.3); g.rbox(31.2, 0.22, 0.6, E(0xffd23a, 0.7), 0, 12.12, -26.3);
+    for (let k = -3; k <= 3; k++) g.rbox(1.6, 0.5, 0.4, E(k % 2 ? 0xffe14a : 0x2bf0ff, 1), k * 4.6, 12.55, -25.85);
     // scenery: trees, tyre stacks, cones, distant hills
     const r = rng(77);
     for (let k = 0; k < 46; k++) { const a = r() * Math.PI * 2, rr = 36 + r() * 70; if (Math.abs(Math.sin(a) * rr) < 14 && Math.cos(a) * rr > 0 && false) continue; const x = Math.cos(a) * rr, z = Math.sin(a) * rr; if ((z > 6 && Math.abs(x) < 30) || (z < 0 && z > -60 && Math.abs(x) < 20)) continue; const sc = 0.9 + r() * 0.9;
@@ -123,15 +126,17 @@ const App = window.App = {
     // zoom out just enough to fit the whole front row for this window shape
     const cv = this.R.canvas, asp = Math.max(0.5, cv.clientWidth / Math.max(1, cv.clientHeight));
     const need = Math.max(11.5, ((L.frontHalf || 0) + 3.4) / (Math.tan(0.45) * asp * 0.62)); // leave room for the party panel and Play button
-    const c = L.cam, tgt = locker ? { x: 3.4, y: 2.6, z: 8.2, tx: 3.4, ty: 1.0 } : { x: Math.sin(L.t * 0.15) * 0.8, y: 3.0 + (L.rows > 1 ? 1.6 : 0) + (need - 11.5) * 0.2, z: need + (L.rows > 1 ? 1.5 : 0), tx: 0, ty: 1.9 + (L.rows > 1 ? 0.4 : 0) };
+    const c = L.cam, mx = L.karts[0] ? L.karts[0].pos[0] : 0, tgt = locker ? { x: mx + 3.4, y: 2.6, z: 8.2, tx: mx + 3.4, ty: 1.0 } : { x: Math.sin(L.t * 0.15) * 0.8, y: 3.0 + (L.rows > 1 ? 1.6 : 0) + (need - 11.5) * 0.2, z: need + (L.rows > 1 ? 1.5 : 0), tx: 0, ty: 1.9 + (L.rows > 1 ? 0.4 : 0) };
     const k = 1 - Math.exp(-4 * dt);
     c.x = lerp(c.x, tgt.x, k); c.y = lerp(c.y, tgt.y, k); c.z = lerp(c.z, tgt.z, k); c.tx = lerp(c.tx, tgt.tx, k); c.ty = lerp(c.ty, tgt.ty, k);
     L.karts.forEach((kk, i) => { const yaw = i === 0 ? (this.dragYaw !== undefined ? this.dragYaw : L.t * 0.45 + 0.6) : kk.yaw + Math.sin(L.t + i) * 0.1; kk.view.update(kk.pos[0], kk.pos[1] + 0.06, kk.pos[2], yaw, 0, 0, Math.sin(L.t * 0.7) * 0.3, 0, dt, {}); });
+    // in the Locker you only see your own kart (party members' karts are hidden until you go back)
+    L.karts.forEach((kk, i) => { if (i) for (const m of kk.meshes) m.visible = !locker; if (kk.tag) kk.tag.style.visibility = locker && i ? 'hidden' : ''; });
     L.beams.forEach((b, i) => M4.trs(b.x, 0, b.z, i, Math.sin(L.t * 0.45 + i * 1.7) * 0.32, Math.cos(L.t * 0.37 + i * 2.3) * 0.32 + (b.x > 0 ? 0.25 : -0.25), 1, b.m.m));
     L.pulse.alpha = 0.45 + 0.4 * Math.sin(L.t * 2.2); { const s = 1 + 0.012 * Math.sin(L.t * 2.2); M4.trs(0, 0, 0, L.t * 0.1, 0, 0, s, L.pulse.m); }
     const ps = L.scene.particles[0];
     const me = L.karts[0]; const tr = me && (CAT[me.o.cos.trail] || {}).kind;
-    if (tr && tr !== 'none' && Math.random() < 0.7) { const a = (this.dragYaw !== undefined ? this.dragYaw : L.t * 0.45 + 0.6); const col = tr === 'fire' || tr === 'ember' ? [1, 0.5, 0.1, 1] : tr === 'rainbow' || tr === 'prime' ? [...hsl(L.t % 1), 1] : tr === 'ice' ? [0.6, 0.9, 1, 1] : tr === 'bubbles' ? [0.6, 0.9, 1, 0.6] : tr === 'smoke' ? [0.7, 0.7, 0.75, 0.5] : tr === 'hearts' ? [1, 0.3, 0.55, 1] : tr === 'leaf' ? [0.4, 0.9, 0.3, 1] : tr === 'shadow' ? [0.6, 0.2, 1, 1] : [1, 0.9, 0.5, 1]; ps.emit(-Math.sin(a) * 1.4, 0.6, -Math.cos(a) * 1.4, -Math.sin(a) * 2, 0.8, -Math.cos(a) * 2, col, 0.7, 0.8); }
+    if (tr && tr !== 'none' && Math.random() < 0.7) { const a = (this.dragYaw !== undefined ? this.dragYaw : L.t * 0.45 + 0.6); const col = tr === 'fire' || tr === 'ember' ? [1, 0.5, 0.1, 1] : tr === 'rainbow' || tr === 'prime' ? [...hsl(L.t % 1), 1] : tr === 'ice' ? [0.6, 0.9, 1, 1] : tr === 'bubbles' ? [0.6, 0.9, 1, 0.6] : tr === 'smoke' ? [0.7, 0.7, 0.75, 0.5] : tr === 'hearts' ? [1, 0.3, 0.55, 1] : tr === 'leaf' ? [0.4, 0.9, 0.3, 1] : tr === 'shadow' ? [0.6, 0.2, 1, 1] : [1, 0.9, 0.5, 1]; const kp = me.pos; ps.emit(kp[0] - Math.sin(a) * 1.5, kp[1] + 0.55, kp[2] - Math.cos(a) * 1.5, -Math.sin(a) * 1.2 + (Math.random() - 0.5) * 0.4, 0.6, -Math.cos(a) * 1.2 + (Math.random() - 0.5) * 0.4, col, 0.55, 0.8); }
     ps.update(dt);
     this.R.render(L.scene, c);
     if (this.tab === 'play') L.karts.forEach(kk => { const p = this.R.project(kk.pos[0], kk.pos[1] + 2.6, kk.pos[2]); if (p) { kk.tag.style.left = p.x + 'px'; kk.tag.style.top = (p.y - 64) + 'px'; } });
@@ -143,6 +148,7 @@ const App = window.App = {
     $('modeCard').onclick = () => this.modeModal();
     $('myCard').onclick = () => { this.slot = 'banner'; this.showTab('locker'); };
     $('playBtn').onclick = () => this.play();
+    $('botTog').onclick = () => { if (Net.party && !Net.isLeader()) return; Sfx.play('click'); this.sel.bots = this.sel.bots === false; if (Net.party) Net.setParty({ sel: this.sel }); this.renderPlay(); };
     $('daily').onclick = () => { const p = Account.profile; p.lastReward = todayKey(); p.coins += 150; Account.save(); Sfx.play('buy'); this.toast('🎁 +150 Kart Coins! Come back tomorrow for more.'); this.refreshTop(); };
     $('resOk').onclick = () => this.exitRace();
     $('resNext').onclick = () => { const c = this.lastCfg; const k = TRACKS.findIndex(t => t.id === this.sel.track); this.sel.track = TRACKS[(k + 1) % TRACKS.length].id; if (Net.party) Net.setParty({ sel: this.sel }); this.exitRace(true); if (c && (!c.multi || Net.isLeader())) this.play(); };
@@ -297,6 +303,9 @@ const App = window.App = {
     pb.textContent = !multi ? 'Play' : this._autoT ? `Starting in ${this._autoN}…` : `${Net.ready ? 'Not ready' : 'Ready up'} (${nReady}/${mem.length})`;
     pb.className = 'btn ' + (multi && Net.ready && !this._autoT ? 'r' : 'y'); pb.style.fontSize = multi ? '24px' : ''; pb.style.opacity = 1;
     $('modeCard').disabled = !!member;
+    { const bt = $('botTog'), big = multi && mem.length >= 4, on = !big && s.bots !== false && s.mode !== 'tt';
+      bt.classList.toggle('hidden', !multi); bt.classList.toggle('on', on); bt.disabled = !!member || big;
+      $('botSub').textContent = big ? 'Off · 4+ players' : on ? 'On' : 'Off'; bt.title = member ? 'The party leader decides' : big ? 'Parties of 4 or more always race without bots' : 'Turn bots on or off for party races'; }
     this.refreshTop();
     { const mc = $('myCard'); if (mc) mc.innerHTML = this.myCard(true); }
     this.checkAutoStart();
@@ -319,7 +328,7 @@ const App = window.App = {
   modeModal() {
     const inParty = Net.party && Net.members().length > 1;
     const b = this.modal(`<h3>Choose mode</h3><div class="opts" id="mOpts">${Object.values(MODES).map(m => `<button class="opt ${this.sel.mode === m.id ? 'on' : ''}" data-m="${m.id}" ${inParty && m.id === 'tt' ? 'disabled' : ''}><b>${m.icon} ${m.name}</b><span class="muted">${m.desc}${inParty && m.id === 'tt' ? ' (solo only)' : ''}</span></button>`).join('')}</div>
-      <h3 style="margin-top:18px">Choose track</h3><div class="opts" id="tOpts">${TRACKS.map(t => `<button class="opt ${this.sel.track === t.id ? 'on' : ''}" data-t="${t.id}"><div class="tm" style="background-image:url(${this.trackThumb(t.id)})"></div><b>${t.name}</b><span class="muted">${{ beach: 'Sunny seaside', volcano: 'Lava and ash', candy: 'Sweet and colourful', meadow: 'Grassy hills', desert: 'Sand & canyons', snow: 'Icy mountain pass', neon: 'Night city' }[t.theme]}${Account.profile.best[t.id] ? ' · best ' + fmtTime(Account.profile.best[t.id]) : ''}</span></button>`).join('')}</div>
+      <h3 style="margin-top:18px">Choose track</h3><div class="opts" id="tOpts">${TRACKS.map(t => `<button class="opt ${this.sel.track === t.id ? 'on' : ''}" data-t="${t.id}"><div class="tm" style="background-image:url(${this.trackThumb(t.id)})"></div><b>${t.name}</b><span class="muted">${{ beach: 'Sunny seaside', volcano: 'Lava and ash', candy: 'Sweet and colourful', meadow: 'Grassy hills', desert: 'Sand & canyons', snow: 'Icy mountain pass', neon: 'Night city', jungle: 'Vines and waterfalls', autumn: 'Falling leaves', sixseven: '😂 Meme map — 6️⃣7️⃣', stonks: '📈 Meme map — number go up', toilet: '🚽 Meme map — royal flush' }[t.theme]}${Account.profile.best[t.id] ? ' · best ' + fmtTime(Account.profile.best[t.id]) : ''}</span></button>`).join('')}</div>
       <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn y" id="mOk">Confirm</button></div>`, true);
     b.querySelectorAll('[data-m]').forEach(x => x.onclick = () => { this.sel.mode = x.dataset.m; b.querySelectorAll('[data-m]').forEach(y => y.classList.toggle('on', y === x)); });
     b.querySelectorAll('[data-t]').forEach(x => x.onclick = () => { this.sel.track = x.dataset.t; b.querySelectorAll('[data-t]').forEach(y => y.classList.toggle('on', y === x)); });
@@ -336,7 +345,7 @@ const App = window.App = {
     const s = this.sel; let mode = s.mode; if (multi && mode === 'tt') mode = 'gp';
     const seed = (Math.random() * 1e9) | 0; const r = rng(seed);
     const humans = multi ? Net.members().slice(0, 8).map(m => ({ id: m.peer, tag: m.sameTab ? Account.profile.tag : safeTag(m.presence.tag), lvl: m.sameTab ? Account.level : m.presence.lvl | 0, cos: m.sameTab ? packCos(Account.profile.equip) : m.presence.cos })) : [{ id: 'me', tag: Account.profile.tag, lvl: Account.level, cos: packCos(Account.profile.equip) }];
-    const nb = mode === 'tt' || humans.length >= 4 ? 0 : Math.max(0, 8 - humans.length); // 8 racers max; parties of 4+ race without bots
+    const nb = mode === 'tt' || humans.length >= 4 || (multi && s.bots === false) ? 0 : Math.max(0, 8 - humans.length); // 8 racers max; parties of 4+ race without bots
     const names = BOT_NAMES.slice().sort(() => r() - 0.5);
     const bots = [];
     for (let i = 0; i < nb; i++) {
