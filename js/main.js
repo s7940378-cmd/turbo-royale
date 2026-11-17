@@ -291,13 +291,30 @@ const App = window.App = {
     const s = this.partySel(); const m = MODES[s.mode], t = TRACKS.find(x => x.id === s.track);
     $('modeName').textContent = m.name; $('modeSub').textContent = (Net.party && !Net.isLeader()) ? 'Leader picked' : 'Tap to change mode'; $('modeTrack').textContent = t.name;
     $('modeImg').style.backgroundImage = `url(${this.trackThumb(t.id)})`;
-    const member = Net.party && !Net.isLeader() && Net.members().length > 1;
-    const others = Net.party && Net.isLeader() ? Net.members().filter(m => !m.sameTab) : [], notReady = others.filter(m => !m.presence.ready).length;
-    $('playBtn').textContent = member ? (Net.ready ? 'Not ready' : 'Ready up') : notReady ? `Waiting ${others.length - notReady}/${others.length} ready` : 'Play';
-    $('playBtn').className = 'btn ' + (member && Net.ready ? 'r' : 'y'); $('playBtn').style.fontSize = notReady ? '22px' : ''; $('playBtn').style.opacity = notReady ? 0.6 : 1;
+    const multi = Net.party && Net.members().length > 1, member = multi && !Net.isLeader();
+    const mem = multi ? Net.members() : [], nReady = mem.filter(x => this.isReady(x)).length;
+    const pb = $('playBtn');
+    pb.textContent = !multi ? 'Play' : this._autoT ? `Starting in ${this._autoN}…` : `${Net.ready ? 'Not ready' : 'Ready up'} (${nReady}/${mem.length})`;
+    pb.className = 'btn ' + (multi && Net.ready && !this._autoT ? 'r' : 'y'); pb.style.fontSize = multi ? '24px' : ''; pb.style.opacity = 1;
     $('modeCard').disabled = !!member;
     this.refreshTop();
     { const mc = $('myCard'); if (mc) mc.innerHTML = this.myCard(true); }
+    this.checkAutoStart();
+  },
+  isReady(m) { return m.sameTab ? !!Net.ready : !!m.presence.ready; },
+  allReady() { const mem = Net.party ? Net.members() : []; return mem.length > 1 && mem.every(m => this.isReady(m)); },
+  // Leader's client starts the race automatically once every party member (leader included) is ready
+  checkAutoStart() {
+    const ok = Net.party && Net.isLeader() && !this.race && this.allReady();
+    if (!ok) { if (this._autoT) { clearInterval(this._autoT); this._autoT = null; if (Net.party && !this.race) this.toast('Countdown cancelled — someone is not ready'); this.renderPlay(); } return; }
+    if (this._autoT) return;
+    this._autoN = 3; this.toast('Everyone is ready! Starting…'); Sfx.play('click');
+    this._autoT = setInterval(() => {
+      if (!(Net.party && Net.isLeader() && !this.race && this.allReady())) { clearInterval(this._autoT); this._autoT = null; this.renderPlay(); return; }
+      if (--this._autoN <= 0) { clearInterval(this._autoT); this._autoT = null; this.launchRace(); return; }
+      this.renderPlay();
+    }, 1000);
+    this.renderPlay();
   },
   modeModal() {
     const inParty = Net.party && Net.members().length > 1;
@@ -311,8 +328,11 @@ const App = window.App = {
   play() {
     Sfx.init(); Sfx.play('click');
     const multi = Net.party && Net.members().length > 1;
-    if (multi && !Net.isLeader()) { Net.ready = !Net.ready; Net.setParty({ ready: Net.ready }); this.renderPlay(); return; }
-    if (multi) { const nr = Net.members().filter(m => !m.sameTab && !m.presence.ready); if (nr.length) { this.toast('Everyone has to ready up first. Waiting for: <b>' + nr.map(m => esc(safeTag(m.presence.tag))).join(', ') + '</b>'); return; } }
+    if (multi) { Net.ready = !Net.ready; Net.setParty({ ready: Net.ready }); this.renderPlay(); return; } // everyone (leader too) readies up; leader's client auto-starts when all are ready
+    this.launchRace();
+  },
+  launchRace() {
+    const multi = Net.party && Net.members().length > 1;
     const s = this.sel; let mode = s.mode; if (multi && mode === 'tt') mode = 'gp';
     const seed = (Math.random() * 1e9) | 0; const r = rng(seed);
     const humans = multi ? Net.members().slice(0, 8).map(m => ({ id: m.peer, tag: m.sameTab ? Account.profile.tag : safeTag(m.presence.tag), lvl: m.sameTab ? Account.level : m.presence.lvl | 0, cos: m.sameTab ? packCos(Account.profile.equip) : m.presence.cos })) : [{ id: 'me', tag: Account.profile.tag, lvl: Account.level, cos: packCos(Account.profile.equip) }];
@@ -434,8 +454,8 @@ const App = window.App = {
       const mem = Net.members(); const lead = Net.leader();
       el.innerHTML = `<div class="row" style="justify-content:space-between"><div><div class="muted">Party code</div><div class="code">${esc(Net.code)}</div></div><button class="btn sm" id="cpCode">Copy code</button></div>
         <button class="btn b" style="width:100%;margin-top:8px" id="cpLink">🔗 Copy invite link</button>
-        <div class="sep"></div>${mem.map(m => `<div class="mem" data-peer="${esc(m.peer)}" style="${this.memStyle(m)}"><div class="av" style="background:${m.sameTab ? '#ffc928;color:#2a1a00' : '#2a7fff'}">${m === lead ? '👑' : esc(safeTag(m.presence.tag)[0])}</div><div class="nm">${esc(m.sameTab ? Account.profile.tag : safeTag(m.presence.tag))}${m.sameTab ? ' (you)' : ''}${this.memTitle(m)}</div><div class="st ${m === lead || m.presence.ready ? 'rdy' : ''}">${m === lead ? 'LEADER' : m.presence.race && m.presence.k ? 'RACING' : m.presence.ready ? 'READY' : 'NOT READY'}</div></div>`).join('')}
-        <p class="muted" style="margin:6px 0">${mem.length}/8 · ${Net.isLeader() ? (mem.length > 1 ? 'You pick the mode and start the race once everyone is ready. Up to 8 racers. Bots fill empty spots unless 4 or more players are in the party.' : 'Waiting for friends — send them the invite link. You can still race solo.') : 'Waiting for the leader to start.'}</p>
+        <div class="sep"></div>${mem.map(m => `<div class="mem" data-peer="${esc(m.peer)}" style="${this.memStyle(m)}"><div class="av" style="background:${m.sameTab ? '#ffc928;color:#2a1a00' : '#2a7fff'}">${m === lead ? '👑' : esc(safeTag(m.presence.tag)[0])}</div><div class="nm">${esc(m.sameTab ? Account.profile.tag : safeTag(m.presence.tag))}${m.sameTab ? ' (you)' : ''}${this.memTitle(m)}</div><div class="st ${this.isReady(m) ? 'rdy' : ''}">${m.presence.race && m.presence.k && !m.sameTab ? 'RACING' : this.isReady(m) ? 'READY' : 'NOT READY'}</div></div>`).join('')}
+        <p class="muted" style="margin:6px 0">${mem.length}/8 · ${Net.isLeader() ? (mem.length > 1 ? 'You pick the mode. Ready up too — the race starts automatically once everyone is ready. Up to 8 racers. Bots fill empty spots unless 4 or more players are in the party.' : 'Waiting for friends — send them the invite link. You can still race solo.') : 'Ready up — the race starts automatically once everyone (leader included) is ready.'}</p>
         <button class="btn sm r" id="lvParty">Leave party</button>`;
       $('lvParty').onclick = () => { Net.leaveParty(); this.sessionPts = 0; this.sessionWins = 0; this.toast('Left the party'); this.lobbyKarts(); this.renderPlay(); };
       const copy = (txt, ok) => { const done = () => this.toast(ok); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(done, () => this.modal(`<h3>Copy this</h3><input class="inp" style="width:100%;letter-spacing:0;text-transform:none" value="${esc(txt)}" onfocus="this.select()"><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn y" onclick="App.closeModal()">Done</button></div>`)); };
