@@ -704,7 +704,7 @@ const App = window.App = {
   },
   // ---------------- shop ----------------
   shopToday() {
-    const r = rng(hashStr('shop-4h-r2-' + Math.floor(Date.now() / (4 * 3600e3)))); // the shop refreshes every 4 hours
+    const r = rng(hashStr('shop-4h-r3-' + Math.floor(Date.now() / (4 * 3600e3)))); // the shop refreshes every 4 hours
     const pool = CATALOG.filter(i => !i.def && !i.pass).map(i => ({ i, k: r() })).sort((a, b) => a.k - b.k).map(o => o.i);
     const feat = pool.filter(i => i.rarity === 'legendary' || i.rarity === 'epic').slice(0, 3);
     const daily = pool.filter(i => !feat.includes(i)).slice(0, 12);
