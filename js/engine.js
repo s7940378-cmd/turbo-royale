@@ -129,6 +129,65 @@ class Geo {
     }
     return this;
   }
+  // triangle with per-vertex normals; winding fixed so the face points the way the normals do
+  _triN(A, B, C) {
+    const ux = B.p[0] - A.p[0], uy = B.p[1] - A.p[1], uz = B.p[2] - A.p[2], vx = C.p[0] - A.p[0], vy = C.p[1] - A.p[1], vz = C.p[2] - A.p[2];
+    const fx = uy * vz - uz * vy, fy = uz * vx - ux * vz, fz = ux * vy - uy * vx;
+    const L = fx * (A.n[0] + B.n[0] + C.n[0]) + fy * (A.n[1] + B.n[1] + C.n[1]) + fz * (A.n[2] + B.n[2] + C.n[2]) < 0 ? [A, C, B] : [A, B, C];
+    for (const q of L) this.vert(q.p[0], q.p[1], q.p[2], q.n[0], q.n[1], q.n[2], q.c);
+  }
+  // smooth lofted shell along z. stations: [{z, w (half-width), h, y (bottom), n (squareness 2 = oval .. 6 = boxy)}]
+  // col may be a function (dx, dy, hh, z) => colour for paint stripes / two-tone
+  loft(st, seg, col, ox) {
+    ox = ox || 0; seg = seg || 16; const S = st.length, P = [], N = [], sp = (c, e) => Math.sign(c) * Math.pow(Math.abs(c), e);
+    const cf = typeof col === 'function' ? col : null;
+    for (const s of st) { const e = 2 / (s.n || 2.6), yc = s.y + s.h / 2, hh = s.h / 2, row = [];
+      for (let j = 0; j < seg; j++) { const a = j / seg * Math.PI * 2; row.push([ox + s.w * sp(Math.cos(a), e), yc + hh * sp(Math.sin(a), e), s.z]); }
+      P.push(row); }
+    for (let i = 0; i < S; i++) { const row = [], yc = st[i].y + st[i].h / 2;
+      for (let j = 0; j < seg; j++) {
+        const a = P[i][(j + 1) % seg], b = P[i][(j + seg - 1) % seg], c = P[Math.min(S - 1, i + 1)][j], d = P[Math.max(0, i - 1)][j];
+        const t1 = [a[0] - b[0], a[1] - b[1], a[2] - b[2]], t2 = [c[0] - d[0], c[1] - d[1], c[2] - d[2]];
+        let n = [t1[1] * t2[2] - t1[2] * t2[1], t1[2] * t2[0] - t1[0] * t2[2], t1[0] * t2[1] - t1[1] * t2[0]];
+        const dx = P[i][j][0] - ox, dy = P[i][j][1] - yc; if (n[0] * dx + n[1] * dy < 0) n = [-n[0], -n[1], -n[2]];
+        const l = Math.hypot(n[0], n[1], n[2]); row.push(l > 1e-9 ? [n[0] / l, n[1] / l, n[2] / l] : [dx, dy, 0]);
+      }
+      N.push(row); }
+    const C = (i, j) => cf ? cf(P[i][j][0] - ox, P[i][j][1] - (st[i].y + st[i].h / 2), st[i].h / 2, st[i].z) : col;
+    const V = (i, j) => ({ p: P[i][j], n: N[i][j], c: C(i, j) });
+    for (let i = 0; i < S - 1; i++) for (let j = 0; j < seg; j++) { const j1 = (j + 1) % seg, a = V(i, j), b = V(i, j1), c = V(i + 1, j1), d = V(i + 1, j); this._triN(a, b, c); this._triN(a, c, d); }
+    for (const i of [0, S - 1]) { const s = st[i]; if (s.w < 0.025 || s.h < 0.025) continue;
+      const nz = Math.sign(s.z - st[i === 0 ? 1 : S - 2].z) || 1, cn = [0, 0, nz], ctr = { p: [ox, s.y + s.h / 2, s.z], n: cn, c: cf ? cf(0, 0, s.h / 2, s.z) : col };
+      for (let j = 0; j < seg; j++) this._triN(ctr, { p: P[i][j], n: cn, c: C(i, j) }, { p: P[i][(j + 1) % seg], n: cn, c: C(i, (j + 1) % seg) }); }
+    return this;
+  }
+  // soft box: smooth, pillowy panel with rounded ends (centre-based like box/rbox)
+  sbox(w, h, d, col, x, y, z, n, round) {
+    x = x || 0; y = y || 0; z = z || 0; n = n || 4; const e = Math.min(d / 2, round || Math.min(w, h) * 0.45), st = [];
+    const ring = (zz, q) => { const k = Math.sqrt(1 - (1 - q) * (1 - q)), hh = h * (0.55 + 0.45 * k); st.push({ z: zz, w: w / 2 * (0.5 + 0.5 * k), h: hh, y: y - hh / 2, n }); };
+    for (const q of [0.06, 0.45, 1]) ring(z + d / 2 - e * q, q);
+    for (const q of [1, 0.45, 0.06]) ring(z - d / 2 + e * q, q);
+    return this.loft(st, 14, col, x);
+  }
+  // lathe around the x axis: profile [[radius, axialOffset], ...] (used for tyres)
+  lathe(prof, seg, col, x, y, z) {
+    x = x || 0; y = y || 0; z = z || 0; const R = [];
+    for (let i = 0; i < prof.length; i++) {
+      const pr = prof[Math.max(0, i - 1)], nx = prof[Math.min(prof.length - 1, i + 1)], dr = nx[0] - pr[0], da = nx[1] - pr[1];
+      const l = Math.hypot(dr, da) || 1, nr = da / l, na = -dr / l, row = [];
+      for (let j = 0; j < seg; j++) { const t = j / seg * Math.PI * 2, c = Math.cos(t), s = Math.sin(t), r = prof[i][0];
+        row.push({ p: [x + prof[i][1], y + r * c, z + r * s], n: [na, nr * c, nr * s], c: col }); }
+      R.push(row);
+    }
+    for (let i = 0; i < R.length - 1; i++) for (let j = 0; j < seg; j++) { const j1 = (j + 1) % seg; this._triN(R[i][j], R[i][j1], R[i + 1][j1]); this._triN(R[i][j], R[i + 1][j1], R[i + 1][j]); }
+    return this;
+  }
+  // round tube between two points
+  tube(a, b, r, col, seg) {
+    const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2], L = Math.hypot(dx, dy, dz);
+    this.push(M4.trs((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2, Math.atan2(dx, dz), Math.atan2(-dy, Math.hypot(dx, dz)), 0));
+    this.cyl(r, L, seg || 8, col, 'z'); this.pop(); return this;
+  }
   // quad with per-vertex normals (smooth shading)
   quadN(a, b, c, d, na, nb, nc, nd, col) { this.vert(a[0], a[1], a[2], na[0], na[1], na[2], col); this.vert(b[0], b[1], b[2], nb[0], nb[1], nb[2], col); this.vert(c[0], c[1], c[2], nc[0], nc[1], nc[2], col); this.vert(a[0], a[1], a[2], na[0], na[1], na[2], col); this.vert(c[0], c[1], c[2], nc[0], nc[1], nc[2], col); this.vert(d[0], d[1], d[2], nd[0], nd[1], nd[2], col); }
   // cylinder along axis ('x','y','z'), centered; smooth-shaded sides, flat caps
