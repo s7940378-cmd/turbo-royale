@@ -180,6 +180,7 @@ const App = window.App = {
     $('resNext').onclick = () => { const c = this.lastCfg; const k = TRACKS.findIndex(t => t.id === this.sel.track); this.sel.track = TRACKS[(k + 1) % TRACKS.length].id; if (Net.party) Net.setParty({ sel: this.sel }); this.exitRace(true); if (c && (!c.multi || Net.isLeader())) this.play(); };
     $('resAgain').onclick = () => { const c = this.lastCfg; this.exitRace(true); if (c && (!c.multi || Net.isLeader())) this.play(); };
     $('hPause').onclick = () => this.pauseMenu();
+    $('hSpecL').onclick = () => { if (this.race) this.race._specClick = -1; }; $('hSpecR').onclick = () => { if (this.race) this.race._specClick = 1; };
     { const lb = $('hLook'); const on = e => { e.preventDefault(); Input.touch.look = 1; lb.classList.add('on'); }; const off = () => { Input.touch.look = 0; lb.classList.remove('on'); };
       lb.addEventListener('pointerdown', on); ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => lb.addEventListener(ev, off)); lb.addEventListener('contextmenu', e => e.preventDefault()); }
     addEventListener('keydown', e => { if (Input.capturing) return; if (this.race && !this.race.resultsShown && Input.binds.pause.includes(e.code) && $('modal').classList.contains('hidden')) { this.pauseMenu(); return; } if (e.code === 'Escape') { if (!$('modal').classList.contains('hidden')) { if (this.race) { this.closeModal(); this.paused = false; } else this.closeModal(); } else if (this.race && !this.race.resultsShown) this.pauseMenu(); } });

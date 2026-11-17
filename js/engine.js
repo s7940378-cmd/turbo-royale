@@ -353,6 +353,48 @@ void main(){vec4 v=uV*vec4(aP,1.);gl_Position=uP*v;gl_PointSize=min(aS*uK/max(-v
   }
 }
 
+// Real confetti: little paper rectangles that tumble, flutter and catch the light as they fall (a dynamic lit mesh, not glowing dots)
+class Confetti {
+  constructor(R, max) {
+    this.R = R; this.max = max || 600; this.n = 0; this.s = new Float32Array(this.max * 14); // x y z vx vy vz ax ay az ang spin w h life
+    this.c = new Float32Array(this.max * 3); this.data = new Float32Array(this.max * 6 * 12);
+    const gl = R.gl; this.g = { buf: gl.createBuffer(), count: 0 }; this.mesh = R.mesh(this.g, { twoSided: true, fog: true });
+  }
+  emit(x, y, z, vx, vy, vz, life) {
+    if (this.n >= this.max) return; const i = this.n++, o = i * 14, s = this.s, PAL = Confetti.PAL, col = PAL[Math.random() * PAL.length | 0];
+    let ax = Math.random() - 0.5, ay = Math.random() - 0.5, az = Math.random() - 0.5; const l = Math.hypot(ax, ay, az) || 1;
+    s[o] = x; s[o + 1] = y; s[o + 2] = z; s[o + 3] = vx; s[o + 4] = vy; s[o + 5] = vz; s[o + 6] = ax / l; s[o + 7] = ay / l; s[o + 8] = az / l;
+    s[o + 9] = Math.random() * 6.28; s[o + 10] = 6 + Math.random() * 10; s[o + 11] = 0.11 + Math.random() * 0.06; s[o + 12] = 0.2 + Math.random() * 0.1; s[o + 13] = life || 5;
+    this.c[i * 3] = col[0]; this.c[i * 3 + 1] = col[1]; this.c[i * 3 + 2] = col[2];
+  }
+  burst(x, y, z, n, spread, up) { for (let k = 0; k < n; k++) { const a = Math.random() * 6.28, sp = Math.random() * (spread || 6); this.emit(x, y, z, Math.cos(a) * sp, (up || 6) * (0.5 + Math.random()), Math.sin(a) * sp, 4 + Math.random() * 2); } }
+  update(dt, t) {
+    const s = this.s, c = this.c; let w = 0;
+    for (let i = 0; i < this.n; i++) {
+      const o = i * 14; s[o + 13] -= dt; if (s[o + 13] <= 0) continue;
+      // gravity, then strong air drag: paper falls slowly and drifts side to side
+      s[o + 4] -= 9 * dt; const drag = Math.exp(-2.2 * dt); s[o + 3] *= drag; s[o + 5] *= drag; if (s[o + 4] < -2.4) s[o + 4] = lerp(s[o + 4], -2.4, 1 - Math.exp(-6 * dt));
+      const fl = Math.sin(t * 3 + i) * 0.9; s[o] += (s[o + 3] + fl) * dt; s[o + 1] += s[o + 4] * dt; s[o + 2] += (s[o + 5] + Math.cos(t * 2.6 + i * 1.7) * 0.9) * dt; s[o + 9] += s[o + 10] * dt;
+      if (w !== i) { s.copyWithin(w * 14, o, o + 14); c.copyWithin(w * 3, i * 3, i * 3 + 3); } w++;
+    }
+    this.n = w;
+    const d = this.data; let q = 0;
+    for (let i = 0; i < w; i++) {
+      const o = i * 14, x = s[o], y = s[o + 1], z = s[o + 2], ax = s[o + 6], ay = s[o + 7], az = s[o + 8], an = s[o + 9], hw = s[o + 11], hh = s[o + 12];
+      // rotate the flake's two edge vectors around its own axis (Rodrigues)
+      const cs = Math.cos(an), sn = Math.sin(an);
+      const rot = (vx, vy, vz) => { const dt2 = ax * vx + ay * vy + az * vz, cx = ay * vz - az * vy, cy = az * vx - ax * vz, cz = ax * vy - ay * vx; return [vx * cs + cx * sn + ax * dt2 * (1 - cs), vy * cs + cy * sn + ay * dt2 * (1 - cs), vz * cs + cz * sn + az * dt2 * (1 - cs)]; };
+      const u = rot(hw, 0, 0), v = rot(0, 0, hh), nx = u[1] * v[2] - u[2] * v[1], ny = u[2] * v[0] - u[0] * v[2], nz = u[0] * v[1] - u[1] * v[0], nl = Math.hypot(nx, ny, nz) || 1;
+      const fade = Math.min(1, s[o + 13] * 2), r = c[i * 3], g = c[i * 3 + 1], b = c[i * 3 + 2];
+      const P = [[-1, -1], [1, -1], [1, 1], [-1, -1], [1, 1], [-1, 1]];
+      for (const p of P) { d[q++] = x + u[0] * p[0] + v[0] * p[1]; d[q++] = y + u[1] * p[0] + v[1] * p[1]; d[q++] = z + u[2] * p[0] + v[2] * p[1]; d[q++] = nx / nl; d[q++] = Math.abs(ny / nl); d[q++] = nz / nl; d[q++] = r; d[q++] = g; d[q++] = b; d[q++] = fade; d[q++] = 0; d[q++] = 0; }
+    }
+    const gl = this.R.gl; gl.bindBuffer(gl.ARRAY_BUFFER, this.g.buf); gl.bufferData(gl.ARRAY_BUFFER, d.subarray(0, q), gl.DYNAMIC_DRAW); this.g.count = q / 12;
+    this.mesh.visible = q > 0; this.mesh.alpha = 0.999;
+  }
+}
+Confetti.PAL = [[1, 0.2, 0.3], [1, 0.8, 0.1], [0.2, 0.75, 1], [0.35, 0.9, 0.35], [0.85, 0.35, 1], [1, 0.5, 0.15], [1, 1, 1], [1, 0.45, 0.7]];
+
 class Particles {
   constructor(max, additive) {
     this.max = max; this.additive = additive; this.n = 0;

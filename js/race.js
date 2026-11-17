@@ -56,6 +56,7 @@ class Race {
     this._grid();
     this._boxes(); this._pads(); this._features(); this._coins();
     this.proj = []; this.slicks = []; this.fxSeen = new Set();
+    this.confetti = new Confetti(this.R, 700); this.scene.meshes.push(this.confetti.mesh);
     this.state = 'intro'; this.t = 0; this.raceTime = 0; this.introT = 2.2; this.count = 3.6; this.lastCount = 4;
     this.cam = { x: 0, y: 20, z: 0, tx: 0, ty: 0, tz: 0, fov: 1.2, near: 0.3, far: 1400 };
     this.camYaw = this.me ? this.me.yaw : 0; this.spectate = null;
@@ -217,6 +218,8 @@ class Race {
     this._rank();
     this._boxesUpdate(dt);
     this._fxUpdate(dt);
+    this.confetti.update(dt, this.t);
+    this._specUpdate(ctl);
     this._camera(dt, ctl);
     this._hudUpdate(dt);
     if (this.net) { this.netT -= dt; if (this.netT <= 0) { this.netT = 1 / 15; this.net.sendRace(this); } }
@@ -802,10 +805,12 @@ class Race {
       r.x = p.c[0] + p.X[k] * cy; r.z = p.c[2] - p.X[k] * sy; r.y = p.c[1] + p.H[k]; r.elim = false;
       const yaw = p.yaw + Math.sin(p.t * 1.6 + k * 2) * 0.55 + (k === 0 && p.t > 2.2 && p.t < 3.2 ? (p.t - 2.2) * Math.PI * 2 : 0);
       r.view.update(r.x, r.y, r.z, yaw, 0, Math.sin(ph * 0.5) * 0.08, Math.sin(p.t * 3 + k), 6, dt, { hop, sq: hop < 0.2 ? -0.16 : 0.06, alpha: 1 });
-      if (Math.random() < 0.5) this.fxAdd.emit(r.x + (Math.random() - 0.5) * 2, r.y + 0.4, r.z + (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 3, 5 + Math.random() * 4, (Math.random() - 0.5) * 3, k === 0 ? [1, 0.85, 0.3, 1] : [0.8, 0.9, 1, 1], 0.5, 0.7, 0, 9);
+      if (hop < 0.05 && !r._landed) { r._landed = 1; for (let q = 0; q < 10; q++) this.confetti.emit(r.x, r.y + 0.6, r.z, (Math.random() - 0.5) * 5, 4 + Math.random() * 3, (Math.random() - 0.5) * 5, 3); } else if (hop > 0.2) r._landed = 0;
     }
-    for (let q = 0; q < 4; q++) this.fxN.emit(p.c[0] + (Math.random() - 0.5) * 18, p.c[1] + 9 + Math.random() * 3, p.c[2] + (Math.random() - 0.5) * 18, (Math.random() - 0.5) * 3, -2 - Math.random() * 2, (Math.random() - 0.5) * 3, [Math.random(), Math.random(), Math.random(), 1], 0.55, 3.5, 0, 1.5);
-    this.fxAdd.update(dt); this.fxN.update(dt);
+    // confetti: cannons on both sides at the start, then a steady shower over the podium
+    if (!p.cannons) { p.cannons = 1; for (const sx of [-1, 1]) { const bx = p.c[0] + sx * 8 * cy, bz = p.c[2] - sx * 8 * sy; for (let q = 0; q < 160; q++) this.confetti.emit(bx, p.c[1] + 0.5, bz, -sx * cy * (4 + Math.random() * 5) + (Math.random() - 0.5) * 3, 9 + Math.random() * 6, sx * sy * (4 + Math.random() * 5) + (Math.random() - 0.5) * 3, 5 + Math.random() * 2); } }
+    for (let q = 0; q < 3; q++) this.confetti.emit(p.c[0] + (Math.random() - 0.5) * 16, p.c[1] + 10 + Math.random() * 3, p.c[2] + (Math.random() - 0.5) * 16, 0, -1, 0, 6);
+    this.fxAdd.update(dt); this.fxN.update(dt); this.confetti.update(dt, this.t);
     const sw = Math.sin(p.t * 0.5) * 4, d = 15 - Math.min(p.t, 3) * 1.2, kk = p.t < 0.1 ? 1 : 1 - Math.exp(-3 * dt);
     const tx = p.c[0] + sy * d - cy * sw, tz = p.c[2] + cy * d + sy * sw;
     c.x = lerp(c.x, tx, kk); c.z = lerp(c.z, tz, kk); c.y = lerp(c.y, p.c[1] + 3.6, kk); c.tx = p.c[0]; c.ty = p.c[1] + 2.4; c.tz = p.c[2]; c.fov = 0.95;
@@ -831,7 +836,23 @@ class Race {
       this.fxAdd.emit(x, y, z, (Math.random() - 0.5) * 14, Math.random() * 10, (Math.random() - 0.5) * 14, c, 0.7 + Math.random() * 0.6, 0.6 + Math.random() * 0.4, -0.4, 14);
     }
   }
-  _confetti(r) { for (let i = 0; i < 120; i++) this.fxN.emit(r.x + (Math.random() - 0.5) * 6, r.y + 6 + Math.random() * 4, r.z + (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 8, Math.random() * 6, (Math.random() - 0.5) * 8, [Math.random(), Math.random(), Math.random(), 1], 0.6, 3, 0, 5); }
+  // after you finish (or get knocked out) you can watch anyone still racing: steer left/right or tap the arrows
+  _specUpdate(ctl) {
+    const me = this.me, el = document.getElementById('hSpec'); if (!el) return;
+    const on = me && (me.finished || me.elim) && !this.podium && !this.resultsShown && this.state !== 'intro';
+    const cands = on ? this.order.filter(o => o !== me && !o.finished && !o.elim) : [];
+    el.classList.toggle('hidden', !on || !cands.length); if (!on) return;
+    if (this._finT === undefined) this._finT = this.t;
+    let cur = this.specId ? this.byId[this.specId] : null;
+    if (cur && (cur.finished || cur.elim) && !cands.includes(cur)) { cur = null; this.specId = null; if (cands.length) { this.specId = cands[0].id; this._specSnap = true; } }
+    if (this.specId === undefined && this.t - this._finT > 2.5 && cands.length) { this.specId = (cands.find(o => o.human) || cands[0]).id; this._specSnap = true; }
+    const cycle = d => { const list = [null, ...cands.map(o => o.id)]; let i = list.indexOf(this.specId || null); if (i < 0) i = 0; this.specId = list[(i + d + list.length) % list.length]; if (me.elim && !this.specId) this.specId = cands[0] && cands[0].id; this._specSnap = true; Sfx.play('click'); };
+    const s = Math.abs(ctl.steer || 0) > 0.6 ? Math.sign(ctl.steer) : 0; if (s && s !== this._specS) cycle(s); this._specS = s;
+    if (this._specClick) { cycle(this._specClick); this._specClick = 0; }
+    const t = this.specId ? this.byId[this.specId] : null;
+    const txt = t ? `${t.name} · ${ORD(t.place)}` : 'You'; if (this._specTxt !== txt) { this._specTxt = txt; document.getElementById('hSpecN').textContent = txt; }
+  }
+  _confetti(r) { this.confetti.burst(r.x, r.y + 5, r.z, 220, 7, 7); }
   _trails(r, dt) {
     if (r.elim) return;
     const fx = Math.sin(r.yaw), fz = Math.cos(r.yaw), rx = -fz, rz = fx;
@@ -890,7 +911,9 @@ class Race {
   _camera(dt, ctl) {
     const c = this.cam;
     let r = this.me;
-    if (!r || r.elim) { const alive = this.order.filter(o => !o.elim); r = alive[0] || this.me; this.spectate = r; } else this.spectate = null;
+    if (!r || r.elim) { const alive = this.order.filter(o => !o.elim); r = (this.specId && this.byId[this.specId] && !this.byId[this.specId].elim ? this.byId[this.specId] : alive[0]) || this.me; this.spectate = r; }
+    else if (r.finished && this.specId && this.byId[this.specId]) { r = this.byId[this.specId]; this.spectate = r; } else this.spectate = null;
+    if (this._specSnap) { this._specSnap = false; this.camYaw = r.yaw; const fx = Math.sin(r.yaw), fz = Math.cos(r.yaw); c.x = r.x - fx * 7.5; c.z = r.z - fz * 7.5; c.y = r.y + 3.1; }
     if (!r) return;
     if (this.state === 'intro') {
       const a = this.t * 0.6 + r.yaw + 2.2, d = Math.max(7, 18 - this.t * 3);
@@ -957,7 +980,8 @@ class Race {
     for (const m of this.scene.meshes) { /* geometry for karts is cached/shared; free track meshes */ }
     for (const m of this.track.meshes) this.R.free(m.g);
     Sfx.engine(false); this.R.free(this.coinGeo); { const sf = document.getElementById('speedfx'); if (sf) sf.style.opacity = 0; }
-    this.h.root.classList.add('hidden'); this.h.root.classList.remove('podium');
+    this.h.root.classList.add('hidden'); this.h.root.classList.remove('podium'); { const sp = document.getElementById('hSpec'); if (sp) sp.classList.add('hidden'); }
+    if (this.confetti) this.R.free(this.confetti.g);
   }
 }
 function fmtTime(t) { if (t == null) return '--:--.--'; const m = Math.floor(t / 60), s = t - m * 60; return `${m}:${s < 10 ? '0' : ''}${s.toFixed(2)}`; }

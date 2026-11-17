@@ -196,6 +196,9 @@ kbd{background:rgba(255,255,255,.15);border-radius:5px;padding:1px 6px;font-weig
 .feed{background:rgba(107,31,214,.75);padding:4px 10px;border-radius:8px;animation:tin .25s}
 #hPause{position:absolute;right:180px;top:20px;pointer-events:auto;width:44px;height:44px;border-radius:12px;background:rgba(5,10,40,.6);font-size:20px;display:grid;place-items:center}
 #hLook{position:absolute;right:232px;top:20px;pointer-events:auto;width:56px;height:44px;border-radius:12px;background:rgba(5,10,40,.6);font-size:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;touch-action:none;border:2px solid transparent}
+#hSpec{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;pointer-events:auto;background:rgba(5,10,40,.7);border:2px solid rgba(255,255,255,.25);border-radius:16px;padding:6px 8px}
+#hSpec>div{text-align:center;min-width:170px}#hSpec small{display:block;font-family:Rubik;font-size:10px;font-weight:900;opacity:.75;letter-spacing:.5px}#hSpec b{font-size:22px;color:var(--yellow);font-weight:400}
+#hSpec button{width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.12);font-size:20px;color:#fff}#hSpec button:hover{background:rgba(255,225,74,.35)}
 #hLook small{font-family:Rubik;font-size:9px;font-weight:900;margin-top:2px}
 #hLook.on{border-color:var(--yellow);background:rgba(255,225,74,.35)}
 .kb{min-width:92px;padding:7px 10px;border-radius:9px;background:rgba(0,0,0,.35);border:2px solid var(--line);font-weight:900;font-size:13px}
@@ -326,6 +329,7 @@ kbd{background:rgba(255,255,255,.15);border-radius:5px;padding:1px 6px;font-weig
   <div id="hKo" class="hidden"></div>
   <div class="pos" id="hPos">1</div>
   <button id="hPause" title="Menu (Esc)">⏸</button>
+  <div id="hSpec" class="hidden"><button id="hSpecL">◀</button><div><small>Spectating · steer to switch</small><b id="hSpecN">You</b></div><button id="hSpecR">▶</button></div>
   <button id="hLook" title="Look behind (hold)">👀<small>BACK</small></button>
   <div id="hCenter"><div id="hMsg"></div><div id="hSub"></div></div>
   <div id="hFeed"></div>
@@ -352,15 +356,15 @@ kbd{background:rgba(255,255,255,.15);border-radius:5px;padding:1px 6px;font-weig
 <div id="modal" class="modal hidden"><div class="mbox" id="mbox"></div></div>
 <div id="toasts"></div>
 
-<script src="js/engine.js?v=202611171500"></script>
-<script src="js/data.js?v=202611171500"></script>
-<script src="js/sys.js?v=202611171500"></script>
-<script src="js/kart.js?v=202611171500"></script>
-<script src="js/track.js?v=202611171500"></script>
-<script src="js/features.js?v=202611171500"></script>
-<script src="js/race.js?v=202611171500"></script>
-<script src="js/account.js?v=202611171500"></script>
-<script src="js/net.js?v=202611171500"></script>
-<script src="js/main.js?v=202611171500"></script>
+<script src="js/engine.js?v=202611171515"></script>
+<script src="js/data.js?v=202611171515"></script>
+<script src="js/sys.js?v=202611171515"></script>
+<script src="js/kart.js?v=202611171515"></script>
+<script src="js/track.js?v=202611171515"></script>
+<script src="js/features.js?v=202611171515"></script>
+<script src="js/race.js?v=202611171515"></script>
+<script src="js/account.js?v=202611171515"></script>
+<script src="js/net.js?v=202611171515"></script>
+<script src="js/main.js?v=202611171515"></script>
 </body>
 </html>
