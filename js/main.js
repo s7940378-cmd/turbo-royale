@@ -54,30 +54,44 @@ const App = window.App = {
   },
   // ---------------- lobby 3D ----------------
   buildLobby() {
-    const R = this.R; const g = new Geo();
-    // floor disc with rings
-    for (let i = 0; i < 48; i++) {
-      const a0 = i / 48 * Math.PI * 2, a1 = (i + 1) / 48 * Math.PI * 2;
-      for (let k = 0; k < 6; k++) {
-        const r0 = k * 12, r1 = (k + 1) * 12; const c0 = mixc(hexc(0x2338b8), hexc(0x140a50), k / 6), c1 = mixc(hexc(0x2338b8), hexc(0x140a50), (k + 1) / 6);
-        const P = (r, a) => [Math.cos(a) * r, 0, Math.sin(a) * r];
-        g.vert(...P(r0, a0), 0, 1, 0, c0); g.vert(...P(r1, a1), 0, 1, 0, c1); g.vert(...P(r1, a0), 0, 1, 0, c1);
-        g.vert(...P(r0, a0), 0, 1, 0, c0); g.vert(...P(r0, a1), 0, 1, 0, c0); g.vert(...P(r1, a1), 0, 1, 0, c1);
-      }
+    const R = this.R, g = new Geo(), E = (h, e) => hexc(h, e === undefined ? 0 : e);
+    const ring = (r0, r1, y, colf, seg) => { seg = seg || 64; for (let i = 0; i < seg; i++) { const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2, c = colf(i); const P = (r, a) => [Math.cos(a) * r, y, Math.sin(a) * r];
+      g.vert(...P(r0, a0), 0, 1, 0, c); g.vert(...P(r1, a1), 0, 1, 0, c); g.vert(...P(r1, a0), 0, 1, 0, c); g.vert(...P(r0, a0), 0, 1, 0, c); g.vert(...P(r0, a1), 0, 1, 0, c); g.vert(...P(r1, a1), 0, 1, 0, c); } };
+    // show floor: asphalt plaza, painted rings, chequered band, grass beyond
+    ring(0, 9, 0, () => E(0x343a48)); ring(9, 9.35, 0.01, () => E(0xffd23a, 0.5)); ring(9.35, 17, 0, () => E(0x2c313d));
+    ring(17, 18.2, 0.01, i => E(i % 2 ? 0x15171c : 0xe9edf2), 72); ring(18.2, 19.4, 0.01, i => E(i % 2 ? 0xe9edf2 : 0x15171c), 72);
+    ring(19.4, 30, 0, () => E(0x2c313d)); ring(30, 31, 0.02, i => E(i % 2 ? 0xe8333a : 0xffffff), 96); ring(31, 170, -0.02, () => E(0x3f8a4a), 48);
+    // backdrop gantry
+    g.rbox(1.6, 14, 1.6, E(0x2b3a6b), -21, 7, -27); g.rbox(1.6, 14, 1.6, E(0x2b3a6b), 21, 7, -27); g.rbox(44, 1.2, 1.8, E(0x2b3a6b), 0, 14, -27);
+    for (let k = -3; k <= 3; k++) g.rbox(1.8, 1.1, 0.5, E(k % 2 ? 0xffe14a : 0x2bf0ff, 1), k * 5.6, 12.7, -26.3);
+    // scenery: trees, tyre stacks, cones, distant hills
+    const r = rng(77);
+    for (let k = 0; k < 46; k++) { const a = r() * Math.PI * 2, rr = 36 + r() * 70; if (Math.abs(Math.sin(a) * rr) < 14 && Math.cos(a) * rr > 0 && false) continue; const x = Math.cos(a) * rr, z = Math.sin(a) * rr; if ((z > 6 && Math.abs(x) < 30) || (z < 0 && z > -60 && Math.abs(x) < 20)) continue; const sc = 0.9 + r() * 0.9;
+      g.cyl(0.45 * sc, 3 * sc, 6, E(0x7a4f2a), 'y', x, 1.5 * sc, z); const leaf = mixc(E(0x2f9e3a), E(0x7fd23a), r()); g.sphere(2.4 * sc, 9, 6, leaf, x, 4.4 * sc, z); g.sphere(1.7 * sc, 8, 5, shade(leaf, 1.1), x + 0.9 * sc, 5.6 * sc, z + 0.4); }
+    for (const sx of [-1, 1]) { for (let k = 0; k < 3; k++) g.cyl(0.8, 0.5, 12, E(k % 2 ? 0x222226 : 0x2c2c32), 'y', sx * 21, 0.25 + k * 0.5, -6); for (let k = 0; k < 4; k++) { g.cone(0.4, 1.0, 8, E(0xff7a1c), sx * (12 + k * 2.2), 0, 7 - k * 1.5); } }
+    for (let k = 0; k < 22; k++) { const a = k / 22 * Math.PI * 2 + r() * 0.2, hh = 28 + r() * 40, rad = 150; g.cone(46 + r() * 30, hh, 7, mixc(E(0x5a4a9a), E(0x8a5aa8), r()), Math.cos(a) * rad, -4, Math.sin(a) * rad); }
+    // sky: warm horizon to deep blue, sun, clouds
+    const dome = new Geo(), HZ = E(0xffb27a, 1), MID = E(0xb565c8, 1), TOP = E(0x1a2470, 1);
+    for (let j = 0; j < 10; j++) for (let i = 0; i < 28; i++) {
+      const t0 = j / 10 * Math.PI / 2, t1 = (j + 1) / 10 * Math.PI / 2, p0 = i / 28 * Math.PI * 2, p1 = (i + 1) / 28 * Math.PI * 2, rr = 320;
+      const P = (t, p) => [Math.cos(t) * Math.cos(p) * rr, Math.sin(t) * rr * 0.7 - 12, Math.cos(t) * Math.sin(p) * rr];
+      const C = f => f < 0.3 ? mixc(HZ, MID, f / 0.3) : mixc(MID, TOP, (f - 0.3) / 0.7), cA = C(j / 10), cB = C((j + 1) / 10);
+      const A = P(t0, p0), B = P(t0, p1), Cc = P(t1, p1), D = P(t1, p0);
+      dome.vert(...A, 0, 1, 0, cA); dome.vert(...Cc, 0, 1, 0, cB); dome.vert(...B, 0, 1, 0, cA); dome.vert(...A, 0, 1, 0, cA); dome.vert(...D, 0, 1, 0, cB); dome.vert(...Cc, 0, 1, 0, cB);
     }
-    const dome = new Geo();
-    for (let j = 0; j < 8; j++) for (let i = 0; i < 24; i++) {
-      const t0 = j / 8 * Math.PI / 2, t1 = (j + 1) / 8 * Math.PI / 2, p0 = i / 24 * Math.PI * 2, p1 = (i + 1) / 24 * Math.PI * 2, r = 150;
-      const P = (t, p) => [Math.cos(t) * Math.cos(p) * r, Math.sin(t) * r - 10, Math.cos(t) * Math.sin(p) * r];
-      const cA = mixc(hexc(0x3a7bff, 1), hexc(0x4a10a8, 1), j / 8), cB = mixc(hexc(0x3a7bff, 1), hexc(0x4a10a8, 1), (j + 1) / 8);
-      const a = P(t0, p0), b = P(t0, p1), c = P(t1, p1), d = P(t1, p0);
-      dome.vert(...a, 0, 1, 0, cA); dome.vert(...c, 0, 1, 0, cB); dome.vert(...b, 0, 1, 0, cA); dome.vert(...a, 0, 1, 0, cA); dome.vert(...d, 0, 1, 0, cB); dome.vert(...c, 0, 1, 0, cB);
-    }
-    // light beams
-    for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; dome.box(1.2, 80, 1.2, hexc(0x8fd0ff, 0.9), Math.cos(a) * 70, 30, Math.sin(a) * 70 - 30); }
+    dome.sphere(26, 16, 10, E(0xfff0c0, 1), -70, 22, -290); dome.sphere(40, 14, 8, [1, 0.85, 0.6, 0.6], -70, 22, -300);
+    for (let k = 0; k < 9; k++) { const a = -Math.PI * (0.1 + 0.8 * r()), dd = 230 + r() * 40, y = 50 + r() * 60; for (let q = 0; q < 4; q++) dome.sphere(12 + r() * 10, 9, 6, [1, 0.78, 0.8, 0.75], Math.cos(a) * dd + (r() - 0.5) * 44, y + r() * 6, Math.sin(a) * dd + (r() - 0.5) * 30, 0.5); }
+    const tex = Textures.get(R), bn = new Geo(); bn.quad([-15, 8.2, -26.1], [15, 8.2, -26.1], [15, 11.9, -26.1], [-15, 11.9, -26.1], E(0xffffff, 0.75), [[0, 1], [1, 1], [1, 0], [0, 0]]);
+    // searchlights (swaying beams) and a pulsing floor ring replace the old floating dots
+    const beam = new Geo(); beam.cyl(0.35, 70, 10, [1, 0.95, 0.75, 1], 'y', 0, 35, 0, [1, 0.95, 0.75, 1], 4.5);
+    const beamG = R.upload(beam), beams = [[-26, -30], [26, -30], [-40, -12], [40, -12]].map(q => ({ x: q[0], z: q[1], m: R.mesh(beamG, { alpha: 0.13, blend: 'add', twoSided: true, fog: false }) }));
+    const pr = new Geo(); { const gg = g; const save = [gg.p, gg.n, gg.c, gg.u]; } for (let i = 0; i < 64; i++) { const a0 = i / 64 * Math.PI * 2, a1 = (i + 1) / 64 * Math.PI * 2, P = (rr, a) => [Math.cos(a) * rr, 0.03, Math.sin(a) * rr], c = [0.17, 0.94, 1, 1];
+      pr.vert(...P(16.4, a0), 0, 1, 0, c); pr.vert(...P(16.8, a1), 0, 1, 0, c); pr.vert(...P(16.8, a0), 0, 1, 0, c); pr.vert(...P(16.4, a0), 0, 1, 0, c); pr.vert(...P(16.4, a1), 0, 1, 0, c); pr.vert(...P(16.8, a1), 0, 1, 0, c); }
+    const pulse = R.mesh(R.upload(pr), { alpha: 0.9, blend: 'add' });
+    const tall = new Geo(); tall.cyl(2.5, 1.4, 24, E(0x2b3a6b), 'y', 0, 0.7, 0); tall.cyl(2.62, 0.14, 24, E(0xffd23a, 0.9), 'y', 0, 1.28, 0);
     this.lobby = {
-      scene: { meshes: [R.mesh(R.upload(g)), R.mesh(R.upload(dome), { fog: false, twoSided: true })], particles: [new Particles(400, true)], fog: { color: [0.2, 0.2, 0.6], near: 60, far: 160 }, light: { dir: [0.45, 0.8, 0.4].map(v => v / Math.hypot(0.45, 0.8, 0.4)), sky: [0.65, 0.7, 0.95], ground: [0.3, 0.25, 0.5], sun: [0.7, 0.65, 0.6] }, sky: [0.15, 0.2, 0.7] },
-      cam: { x: 0, y: 3.2, z: 10.5, tx: 0, ty: 1, tz: 0, fov: 0.9, near: 0.3, far: 400 }, karts: [], t: 0,
+      scene: { meshes: [R.mesh(R.upload(g)), R.mesh(R.upload(dome), { fog: false, twoSided: true }), R.mesh(R.upload(bn), { tex: tex.banner }), pulse, ...beams.map(b => b.m)], particles: [new Particles(200, true)], fog: { color: [0.86, 0.6, 0.6], near: 70, far: 300 }, light: { dir: [0.35, 0.72, 0.6].map(v => v / Math.hypot(0.35, 0.72, 0.6)), sky: [0.72, 0.64, 0.82], ground: [0.42, 0.32, 0.42], sun: [0.9, 0.7, 0.55] }, sky: [0.86, 0.6, 0.6] },
+      cam: { x: 0, y: 3.4, z: 11.5, tx: 0, ty: 1.2, tz: 0, fov: 0.9, near: 0.3, far: 600 }, karts: [], t: 0, beams, pulse, tallG: R.upload(tall), camD: 11.5, rows: 1,
     };
     this.lobbyKarts();
   },
@@ -87,11 +101,17 @@ const App = window.App = {
     L.karts = [];
     const list = [{ name: Account.profile.tag || 'You', cos: Account.profile.equip, me: true, lvl: Account.level }];
     if (Net.party) for (const m of Net.members()) if (!m.sameTab) list.push({ name: safeTag(m.presence.tag), cos: unpackCos(m.presence.cos), lvl: m.presence.lvl | 0, ready: !!m.presence.ready });
-    const slots = [[0, 0, 0], [-6, 0, 2], [6, 0, 2], [-11.5, 0, 4.5], [11.5, 0, 4.5]];
-    list.slice(0, 5).forEach((o, i) => {
-      const v = new KartView(R, o.cos); const ped = R.mesh(props.pedestal); const s = slots[i];
-      M4.trs(s[0], 0, s[2], 0, 0, 0, 1, ped.m);
-      const k = { view: v, pos: s, meshes: [ped, ...v.meshes], o, yaw: i ? (s[0] < 0 ? 0.5 : -0.5) : 0.6 };
+    const n = Math.min(8, list.length), SP = 5.8;
+    // up to 3 in one row; 4+ use a raised second row behind so everyone is visible
+    const nf = n <= 3 ? n : Math.ceil(n / 2), nb = n - nf;
+    const rowX = k => Array.from({ length: k }, (_, i) => (i - (k - 1) / 2) * SP).sort((a, b) => Math.abs(a) - Math.abs(b) || a - b);
+    const slots = [...rowX(nf).map(x => [x, 0, Math.abs(x) * 0.18]), ...rowX(nb).map(x => [x + (nb % 2 === nf % 2 ? SP / 2 : 0), 1.4, -6.2])];
+    L.frontHalf = (nf - 1) / 2 * SP; L.rows = nb ? 2 : 1;
+    list.slice(0, n).forEach((o, i) => {
+      const v = new KartView(R, o.cos); const s = slots[i]; const ped = R.mesh(props.pedestal); const extra = [];
+      M4.trs(s[0], s[1], s[2], 0, 0, 0, 1, ped.m);
+      if (s[1] > 0) { const t = R.mesh(L.tallG); M4.trs(s[0], 0, s[2], 0, 0, 0, 1, t.m); extra.push(t); }
+      const k = { view: v, pos: s, meshes: [ped, ...extra, ...v.meshes], o, yaw: i ? clamp(-s[0] * 0.07, -0.55, 0.55) : 0.6 };
       L.scene.meshes.push(...k.meshes); L.karts.push(k);
     });
     const tags = $('lobbyTags'); tags.innerHTML = '';
@@ -100,17 +120,21 @@ const App = window.App = {
   updateLobby(dt) {
     const L = this.lobby; if (!L) return; L.t += dt;
     const locker = this.tab === 'locker';
-    const c = L.cam, tgt = locker ? { x: 3.4, y: 2.6, z: 8.2, tx: 3.4, ty: 1.0 } : { x: Math.sin(L.t * 0.15) * 0.8, y: 3.4, z: 11.5, tx: 0, ty: 1.2 };
+    // zoom out just enough to fit the whole front row for this window shape
+    const cv = this.R.canvas, asp = Math.max(0.5, cv.clientWidth / Math.max(1, cv.clientHeight));
+    const need = Math.max(11.5, ((L.frontHalf || 0) + 3.4) / (Math.tan(0.45) * asp * 0.62)); // leave room for the party panel and Play button
+    const c = L.cam, tgt = locker ? { x: 3.4, y: 2.6, z: 8.2, tx: 3.4, ty: 1.0 } : { x: Math.sin(L.t * 0.15) * 0.8, y: 3.0 + (L.rows > 1 ? 1.6 : 0) + (need - 11.5) * 0.2, z: need + (L.rows > 1 ? 1.5 : 0), tx: 0, ty: 1.9 + (L.rows > 1 ? 0.4 : 0) };
     const k = 1 - Math.exp(-4 * dt);
     c.x = lerp(c.x, tgt.x, k); c.y = lerp(c.y, tgt.y, k); c.z = lerp(c.z, tgt.z, k); c.tx = lerp(c.tx, tgt.tx, k); c.ty = lerp(c.ty, tgt.ty, k);
-    L.karts.forEach((kk, i) => { const yaw = i === 0 ? (this.dragYaw !== undefined ? this.dragYaw : L.t * 0.45 + 0.6) : kk.yaw + Math.sin(L.t + i) * 0.1; kk.view.update(kk.pos[0], 0.06, kk.pos[2], yaw, 0, 0, Math.sin(L.t * 0.7) * 0.3, 0, dt, {}); });
+    L.karts.forEach((kk, i) => { const yaw = i === 0 ? (this.dragYaw !== undefined ? this.dragYaw : L.t * 0.45 + 0.6) : kk.yaw + Math.sin(L.t + i) * 0.1; kk.view.update(kk.pos[0], kk.pos[1] + 0.06, kk.pos[2], yaw, 0, 0, Math.sin(L.t * 0.7) * 0.3, 0, dt, {}); });
+    L.beams.forEach((b, i) => M4.trs(b.x, 0, b.z, i, Math.sin(L.t * 0.45 + i * 1.7) * 0.32, Math.cos(L.t * 0.37 + i * 2.3) * 0.32 + (b.x > 0 ? 0.25 : -0.25), 1, b.m.m));
+    L.pulse.alpha = 0.45 + 0.4 * Math.sin(L.t * 2.2); { const s = 1 + 0.012 * Math.sin(L.t * 2.2); M4.trs(0, 0, 0, L.t * 0.1, 0, 0, s, L.pulse.m); }
     const ps = L.scene.particles[0];
-    if (Math.random() < 0.6) ps.emit((Math.random() - 0.5) * 40, 0, (Math.random() - 0.5) * 20 - 5, 0, 1 + Math.random(), 0, [0.6, 0.85, 1, 0.8], 0.4 + Math.random() * 0.4, 5);
     const me = L.karts[0]; const tr = me && (CAT[me.o.cos.trail] || {}).kind;
-    if (tr && tr !== 'none' && Math.random() < 0.7) { const a = (this.dragYaw !== undefined ? this.dragYaw : L.t * 0.45 + 0.6); const col = tr === 'fire' ? [1, 0.5, 0.1, 1] : tr === 'rainbow' ? [...hsl(L.t % 1), 1] : tr === 'ice' ? [0.6, 0.9, 1, 1] : tr === 'bubbles' ? [0.6, 0.9, 1, 0.6] : tr === 'smoke' ? [0.7, 0.7, 0.75, 0.5] : [1, 0.9, 0.5, 1]; ps.emit(-Math.sin(a) * 1.4, 0.6, -Math.cos(a) * 1.4, -Math.sin(a) * 2, 0.8, -Math.cos(a) * 2, col, 0.7, 0.8); }
+    if (tr && tr !== 'none' && Math.random() < 0.7) { const a = (this.dragYaw !== undefined ? this.dragYaw : L.t * 0.45 + 0.6); const col = tr === 'fire' || tr === 'ember' ? [1, 0.5, 0.1, 1] : tr === 'rainbow' || tr === 'prime' ? [...hsl(L.t % 1), 1] : tr === 'ice' ? [0.6, 0.9, 1, 1] : tr === 'bubbles' ? [0.6, 0.9, 1, 0.6] : tr === 'smoke' ? [0.7, 0.7, 0.75, 0.5] : tr === 'hearts' ? [1, 0.3, 0.55, 1] : tr === 'leaf' ? [0.4, 0.9, 0.3, 1] : tr === 'shadow' ? [0.6, 0.2, 1, 1] : [1, 0.9, 0.5, 1]; ps.emit(-Math.sin(a) * 1.4, 0.6, -Math.cos(a) * 1.4, -Math.sin(a) * 2, 0.8, -Math.cos(a) * 2, col, 0.7, 0.8); }
     ps.update(dt);
     this.R.render(L.scene, c);
-    if (this.tab === 'play') L.karts.forEach(kk => { const p = this.R.project(kk.pos[0], 2.6, kk.pos[2]); if (p) { kk.tag.style.left = p.x + 'px'; kk.tag.style.top = (p.y - 64) + 'px'; } });
+    if (this.tab === 'play') L.karts.forEach(kk => { const p = this.R.project(kk.pos[0], kk.pos[1] + 2.6, kk.pos[2]); if (p) { kk.tag.style.left = p.x + 'px'; kk.tag.style.top = (p.y - 64) + 'px'; } });
   },
   // ---------------- UI binding ----------------
   bindUI() {
