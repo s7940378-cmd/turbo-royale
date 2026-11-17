@@ -836,6 +836,7 @@ class Race {
     const back = (s, h) => [r.x - fx * 1.3 + rx * s, r.y + (h || 0.3), r.z - fz * 1.3 + rz * s];
     const sp = Math.abs(r.f);
     if (r.cj > 0.1) { const col = r.cj > 0.4 ? [0.3, 1, 0.6, 1] : [1, 1, 0.8, 0.6]; for (const s of [-0.85, 0.85]) { const p = back(s, 0.15); this.fxAdd.emit(p[0], p[1], p[2], (Math.random() - 0.5) * 5, 2 + Math.random() * 4, (Math.random() - 0.5) * 5, col, 0.5, 0.25, 0, 12); } }
+    if (r.cos.body === 'b_eclipse') for (const s of [-0.3, 0.3]) { const ay = r.y + 0.66 + (r.visAir || 0); this.fxAdd.emit(r.x - fx * 1.9 + rx * s, ay, r.z - fz * 1.9 + rz * s, -fx * 7 + (Math.random() - 0.5), (Math.random() - 0.5) * 0.6, -fz * 7 + (Math.random() - 0.5), [1, 0.15, 0.25, 1], r.boost > 0 ? 1 : 0.6, 0.16, -1); }
     if (r.cos.body === 'b_hover_x') for (const s of [-0.36, 0.36]) { const ay = r.y + 1.07 + (r.visAir || 0); this.fxAdd.emit(r.x - fx * 1.85 + rx * s, ay, r.z - fz * 1.85 + rz * s, -fx * 6 + (Math.random() - 0.5), (Math.random() - 0.5) * 0.6, -fz * 6 + (Math.random() - 0.5), [0.3, 0.95, 1, 1], r.boost > 0 ? 0.9 : 0.5, 0.16, -1); }
     // drift sparks
     if (r.drift) {

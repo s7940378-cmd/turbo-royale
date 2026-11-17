@@ -36,7 +36,7 @@ const KartFactory = (() => {
     const key = [cos.body, cos.paint, cos.wheels, cos.driver].join('|');
     const cache = cacheFor(R);
     if (cache.has(key)) return cache.get(key);
-    let body = (CAT[cos.body] || CAT.b_classic).kind; const primeBody = body === 'hoverx'; if (primeBody) body = 'hover';
+    let body = (CAT[cos.body] || CAT.b_classic).kind; const primeBody = body === 'hoverx', eclipseBody = body === 'eclipse'; if (primeBody || eclipseBody) body = 'hover';
     const P = paintCols(cos.paint);
     const g = new Geo();
     let wheelPos = [[-0.85, 0.38, 0.9], [0.85, 0.38, 0.9], [-0.85, 0.38, -0.85], [0.85, 0.38, -0.85]];
@@ -94,6 +94,25 @@ const KartFactory = (() => {
       g.push(M4.trs(0, 1.02, 0.42, 0, -0.5, 0)); g.sbox(1.1, 0.36, 0.04, GLASS, 0, 0, 0, 4, 0.03); g.pop();
       wheelPos = [[-0.92, 0.42, 0.95], [0.92, 0.42, 0.95], [-0.92, 0.45, -0.9], [0.92, 0.45, -0.9]];
       drvZ = -0.15;
+    } else if (body === 'hover' && eclipseBody) {
+      // Eclipse Zero: black-chrome hover hypercar with crimson energy seams, blade pods and a floating halo ring
+      const BLK = hexc(0x0b0b10, 0.35), RED = hexc(0xff1f3a, 1), HOT = hexc(0xffd0d8, 1), EDGE = hexc(0xc8ccd6, 0.4);
+      const seam = (dx, dy, hh) => Math.abs(dy) < hh * 0.1 ? RED : (P.pat === 'stripe' && Math.abs(dx) < 0.06 && dy > hh * 0.4) ? P.a : BLK;
+      g.loft([S(2.1, 0.02, 0.03, 0.42, 2), S(1.85, 0.3, 0.1, 0.42, 2.4), S(1.3, 0.56, 0.2, 0.4, 2.8), S(0.5, 0.72, 0.34, 0.4, 3.2), S(-0.5, 0.74, 0.42, 0.42, 3.2), S(-1.2, 0.62, 0.36, 0.46, 2.8), S(-1.55, 0.4, 0.22, 0.5, 2.2)], 22, seam);
+      for (const sx of [-1, 1]) {
+        g.loft([S(1.7, 0.02, 0.04, 0.42, 2), S(1.2, 0.16, 0.14, 0.42, 2.6), S(0, 0.22, 0.2, 0.42, 3), S(-1.1, 0.2, 0.22, 0.44, 3), S(-1.6, 0.06, 0.12, 0.48, 2.2)], 14, (dx, dy, hh) => Math.abs(dy) < hh * 0.14 ? RED : dy > 0 ? P.a : BLK, sx * 1.0);
+        g.tube([sx * 1.12, 0.54, 1.4], [sx * 1.12, 0.56, -1.4], 0.03, RED, 6);
+        for (const zz of [1.05, -1.05]) { g.cyl(0.4, 0.1, 22, BLK, 'y', sx * 1.0, 0.36, zz, BLK); g.cyl(0.36, 0.04, 22, RED, 'y', sx * 1.0, 0.3, zz); g.cyl(0.18, 0.05, 14, HOT, 'y', sx * 1.0, 0.28, zz); g.cyl(0.41, 0.02, 22, EDGE, 'y', sx * 1.0, 0.42, zz); }
+        g.push(M4.trs(sx * 1.05, 0.62, -1.5, 0, 0, sx * -0.5)); g.wedge(0.04, 0.5, 0.8, BLK, 0, 0, 0, 0.02); g.pop();
+        g.cyl(0.17, 0.6, 16, BLK, 'z', sx * 0.3, 0.66, -1.5, BLK); g.cyl(0.13, 0.05, 14, RED, 'z', sx * 0.3, 0.66, -1.81); g.cyl(0.06, 0.06, 10, HOT, 'z', sx * 0.3, 0.66, -1.83);
+        g.rbox(0.34, 0.035, 0.06, RED, sx * 0.3, 0.5, 2.0);
+      }
+      g.sphere(0.4, 16, 8, hexc(0x2a0008, 0.4), 0, 0.86, 0.45, 0.5); // tinted canopy
+      g.sbox(0.74, 0.46, 0.44, BLK, 0, 0.92, -0.55, 3.4, 0.15);
+      // floating halo ring behind the driver
+      { const n = 28, rr = 0.62, cy = 1.55, cz = -1.1; for (let k = 0; k < n; k++) { const a0 = k / n * Math.PI * 2, a1 = (k + 1) / n * Math.PI * 2; g.tube([Math.cos(a0) * rr, cy + Math.sin(a0) * rr, cz], [Math.cos(a1) * rr, cy + Math.sin(a1) * rr, cz], 0.045, k % 7 === 0 ? HOT : RED, 6); } }
+      g.push(M4.trs(0, 0.9, -1.25, 0, 0, 0)); g.wedge(0.05, 0.5, 0.7, BLK, 0, 0, 0, 0.02); g.pop();
+      wheelPos = [];
     } else if (body === 'hover' && primeBody) {
       // Anti-Grav Prime: same anti-grav silhouette (pointed fuselage, twin side pods, four hover pads, rear wing) in a sleek sci-fi form
       const GOLD = hexc(0xffc928, 0.3), CY = hexc(0x2bf0ff, 1), CORE = hexc(0xeaffff, 1);
@@ -264,7 +283,7 @@ const KartFactory = (() => {
         for (let k = 0; k < nsp; k++) { wg.push(M4.trs(0, 0, 0, 0, k / nsp * Math.PI * 2, wk === 'turbine' ? 0.5 : 0)); wg.box(ww * 0.88, wr * 0.42, wk === 'turbine' ? 0.05 : 0.07, sc, 0, wr * 0.36, 0); wg.pop(); }
       }
     }
-    const out = { body: R.upload(g), wheel: wheelPos.length ? R.upload(wg) : null, wheelPos, wr, hover: body === 'hover' || body === 'ufo', prime: primeBody, bike: wheelPos.length === 2, drvH: 1.9 };
+    const out = { body: R.upload(g), wheel: wheelPos.length ? R.upload(wg) : null, wheelPos, wr, hover: body === 'hover' || body === 'ufo', prime: primeBody || eclipseBody, bike: wheelPos.length === 2, drvH: 1.9 };
     cache.set(key, out);
     return out;
   }

@@ -81,6 +81,7 @@ const CATALOG = [
   { id: 't_ice_x', slot: 'trail', name: 'Frostbite Prime', rarity: 'legendary', kind: 'prime', pass: true, ex: true },
   { id: 'd_king_x', slot: 'driver', name: 'Royale King Prime', rarity: 'legendary', col: 0xffd23a, top: 'crown', pass: true, ex: true },
   { id: 'e_fusion_x', slot: 'engine', name: 'Fusion Core Prime', rarity: 'legendary', kind: 'fusion', stats: [1.04, 1.03, 1.0, 1.05], flame: 0xfff2a8, pass: true, ex: true, desc: 'White-gold flame. Same power as the Fusion Core.' },
+  { id: 'b_eclipse', slot: 'body', name: 'Eclipse Zero', rarity: 'legendary', kind: 'eclipse', stats: [1.284, 1.248, 1.26, 1.26], offroad: true, pass: true, ex: true, desc: 'Code-only hyper kart. 20% better than Anti-Grav Prime in every stat.' },
   { id: 'b_hover_x', slot: 'body', name: 'Anti-Grav Prime', rarity: 'legendary', kind: 'hoverx', stats: [1.07, 1.04, 1.05, 1.05], offroad: true, pass: true, ex: true, desc: 'The level 400 trophy kart. The best kart in the game.' },
   // ---- player card: banners ----
   { id: 'bn_blue', slot: 'banner', name: 'Starter Blue', rarity: 'common', def: true, css: 'linear-gradient(120deg,#2a5bff,#6b1fd6)' },
