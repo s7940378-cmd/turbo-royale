@@ -195,9 +195,9 @@ const App = window.App = {
   modal(html, wide, locked) { $('mbox').className = 'mbox' + (wide ? ' wide' : ''); $('mbox').innerHTML = html; $('modal').classList.remove('hidden'); this._modalLocked = !!locked; return $('mbox'); },
   closeModal() { $('modal').classList.add('hidden'); this._modalLocked = false; },
   tickTimers() {
-    const now = new Date(); const end = new Date(now); end.setUTCHours(24, 0, 0, 0); const s = Math.max(0, (end - now) / 1000);
+    const SH = 4 * 3600e3, slot = Math.floor(Date.now() / SH), s = Math.max(0, ((slot + 1) * SH - Date.now()) / 1000);
     const txt = `${Math.floor(s / 3600)}h ${Math.floor(s % 3600 / 60)}m ${Math.floor(s % 60)}s`;
-    $('shopTimer').textContent = txt; if (this.tab === 'challenges') this.tickChTimers();
+    $('shopTimer').textContent = txt; if (this._shopSlot !== undefined && this._shopSlot !== slot && this.tab === 'shop') this.renderShop(); this._shopSlot = slot; if (this.tab === 'challenges') this.tickChTimers();
     if (this._day && this._day !== todayKey()) { Account.ensurePeriods(); if (this.tab === 'shop') this.renderShop(); if (this.tab === 'challenges') this.renderChallenges(); this.refreshTop(); }
     this._day = todayKey();
   },
@@ -661,7 +661,7 @@ const App = window.App = {
   },
   // ---------------- shop ----------------
   shopToday() {
-    const r = rng(hashStr('shop-r2-' + todayKey()));
+    const r = rng(hashStr('shop-4h-' + Math.floor(Date.now() / (4 * 3600e3)))); // the shop refreshes every 4 hours
     const pool = CATALOG.filter(i => !i.def && !i.pass).map(i => ({ i, k: r() })).sort((a, b) => a.k - b.k).map(o => o.i);
     const feat = pool.filter(i => i.rarity === 'legendary' || i.rarity === 'epic').slice(0, 3);
     const daily = pool.filter(i => !feat.includes(i)).slice(0, 12);

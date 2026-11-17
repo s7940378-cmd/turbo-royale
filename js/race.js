@@ -902,7 +902,9 @@ class Race {
       const back = ctl.look && this.me === r ? -7.5 : 7.5;
       const fx = Math.sin(this.camYaw), fz = Math.cos(this.camYaw);
       const tx = r.x - fx * back, tz = r.z - fz * back; const ty = Math.max(r.y + 3.1, this.track.groundHeight(tx, tz) + 1.5);
-      const k = 1 - Math.exp(-10 * dt);
+      let k = 1 - Math.exp(-10 * dt);
+      // look-behind: snap straight to the rear (or back to the front) with no swing animation
+      const lk = back < 0; if (this._lookCam !== undefined && this._lookCam !== lk) { k = 1; this.camYaw = r.yaw; } this._lookCam = lk;
       c.x = lerp(c.x, tx, k); c.z = lerp(c.z, tz, k); c.y = lerp(c.y, ty, k);
       if (Math.hypot(c.x - tx, c.z - tz) > 30) { c.x = tx; c.z = tz; c.y = ty; }
       c.tx = r.x + fx * (back > 0 ? 4 : -4); c.ty = r.y + 1.3 + (r.visAir || 0) * 0.6; c.tz = r.z + fz * (back > 0 ? 4 : -4);

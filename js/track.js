@@ -25,7 +25,8 @@ const Textures = (() => {
     }));
     t.banner = R.texture(mkCanvas(512, 128, (c, w, h) => {
       const gr = c.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#1b5cff'); gr.addColorStop(1, '#8a2cff'); c.fillStyle = gr; c.fillRect(0, 0, w, h);
-      c.font = '900 64px Arial Black, Arial'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#ffe14a'; c.strokeStyle = '#1a1033'; c.lineWidth = 8;
+      c.font = '900 64px Arial Black, Arial'; const fs = Math.min(64, 64 * (w * 0.86) / c.measureText('TURBO ROYALE').width); c.font = `900 ${fs | 0}px Arial Black, Arial`;
+      c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#ffe14a'; c.strokeStyle = '#1a1033'; c.lineWidth = Math.max(4, fs / 8);
       c.strokeText('TURBO ROYALE', w / 2, h / 2 + 4); c.fillText('TURBO ROYALE', w / 2, h / 2 + 4);
     }));
     return t;
