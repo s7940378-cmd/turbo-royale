@@ -111,6 +111,7 @@ const CATALOG = [
   { id: 'ti_show', slot: 'title', name: 'Show-off', rarity: 'rare', color: '#ff7ac8' },
   { id: 'ti_rocket', slot: 'title', name: 'Rocket Scientist', rarity: 'epic', color: '#c25cff' },
   { id: 'ti_legend', slot: 'title', name: 'Living Legend', rarity: 'legendary', color: '#ffe14a' },
+  { id: 'ti_nobrakes', slot: 'title', name: 'No Brakes', rarity: 'legendary', color: '#b46bff', pass: true, ex: true }, // code-only exclusive
   { id: 'ti_pass', slot: 'title', name: 'Pass Holder', rarity: 'uncommon', color: '#9fe6ff', pass: true },
   { id: 'ti_charged', slot: 'title', name: 'Turbo Charged', rarity: 'rare', color: '#2bf0ff', pass: true },
   { id: 'ti_unstoppable', slot: 'title', name: 'Unstoppable', rarity: 'epic', color: '#ff5aa8', pass: true },
