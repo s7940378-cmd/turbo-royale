@@ -192,7 +192,7 @@ const Net = {
   sendRace(race) {
     if (!this.party) return;
     const r = race.me; const out = {};
-    if (r) out.k = { x: r2(r.x), y: r2(r.y), z: r2(r.z), vx: r2(r.vx), vz: r2(r.vz), yaw: r2(r.yaw), f: r2(r.f), lap: r.lap, prog: +r.prog.toFixed(4), dr: r.drift ? 1 : 0, dd: r.driftDir, sp: r.spin > 0 ? 1 : 0, sh: r.shield > 0 ? 1 : 0, tp: r.torp > 0 ? 1 : 0, ay: r2(r.visAir || 0), tk: r.trickT > 0 ? 1 : 0, b: r.boost > 0 ? 1 : 0, ch: r2(r.charge), st: r2(r.steer), fin: r.finished ? r2(r.ftime) : 0, el: r.elim ? 1 : 0, rid: race.opts.rid };
+    if (r) out.k = { x: r2(r.x), y: r2(r.y), z: r2(r.z), vx: r2(r.vx), vz: r2(r.vz), yaw: r2(r.yaw), f: r2(r.f), lap: r.lap, prog: +r.prog.toFixed(4), dr: r.drift ? 1 : 0, dd: r.driftDir, sp: r.spin > 0 ? 1 : 0, sh: r.shield > 0 ? 1 : 0, tp: r.torp > 0 ? 1 : 0, ay: r2(r.visAir || 0), tk: r.trickT > 0 ? 1 : 0, b: r.boost > 0 ? 1 : 0, ch: r2(r.charge), st: r2(r.steer), fin: r.finished ? r2(r.ftime) : 0, el: r.elim ? 1 : 0, cy: r2(race.camYaw || 0), lb: race._lookCam ? 1 : 0, cn: r.coins | 0, rid: race.opts.rid };
     if (race.host) out.b = race.racers.filter(o => o.bot).map(o => [o.id, r2(o.x), r2(o.z), r2(o.vx), r2(o.vz), r2(o.yaw), r2(o.f), o.lap, +o.prog.toFixed(4), (o.drift ? 1 : 0) | (o.spin > 0 ? 2 : 0) | (o.shield > 0 ? 4 : 0) | (o.boost > 0 ? 8 : 0) | (o.driftDir < 0 ? 16 : 0) | (o.torp > 0 ? 32 : 0), o.finished ? r2(o.ftime) : 0, r2(o.visAir || 0), r2(o.y)]);
     out.fx = this.fxOut.slice(-8);
     this.setParty(out);

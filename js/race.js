@@ -437,7 +437,7 @@ class Race {
     { const gnd = this.track.groundHeight(r.x, r.z) + 0.03; const gy = typeof n.y === 'number' && isFinite(n.y) ? Math.max(n.y, gnd) : Math.max(S.heightAt(si, r.x, r.z), gnd); r.y = gy > r.y ? gy : lerp(r.y, gy, 0.6); } r.visAir = n.ay || 0; r.trickT = n.tk ? 0.2 : 0;
     r.pitch = lerp(r.pitch, -Math.atan(S.ty[si] * Math.cos(r.yaw - S.heading(si))), 0.2);
     r.drift = !!n.dr; r.driftDir = n.dd || 0; r.spin = n.sp ? 0.1 : 0; r.torp = n.tp ? 0.1 : 0; if (n.sp) { r.spinAng = (r.spinAng || 0) + dt * 10; } else if (r.spinAng) { r.spinAng = 0; } r.shield = n.sh ? 1 : 0; r.boost = n.b ? 0.1 : 0; r.charge = n.ch || 0;
-    r.lap = n.lap; r.prog = n.prog; r.steer = n.st || 0;
+    r.lap = n.lap; r.prog = n.prog; r.steer = n.st || 0; r.camYaw = typeof n.cy === 'number' ? n.cy : undefined; r.lookBack = !!n.lb; r.coins = n.cn | 0;
     if (n.fin && !r.finished) { r.finished = true; r.ftime = n.fin; }
   }
   _collide() {
@@ -924,8 +924,10 @@ class Race {
       c.x = lerp(c.x, r.x + Math.sin(a) * 9, k); c.z = lerp(c.z, r.z + Math.cos(a) * 9, k); c.y = lerp(c.y, Math.max(r.y + 3.4, this.track.groundHeight(c.x, c.z) + 1.5), k);
       c.tx = r.x; c.ty = r.y + 1.1; c.tz = r.z; c.fov = lerp(c.fov, 1.0, k);
     } else {
-      this.camYaw += angDiff(this.camYaw, r.yaw + (r.drift ? -r.driftDir * 0.18 : 0)) * (1 - Math.exp(-6 * dt));
-      const back = ctl.look && this.me === r ? -7.5 : 7.5;
+      // spectating a real player: copy their own camera (its swing and their look-behind) so you see exactly what they see
+      if (r !== this.me && r.remote && typeof r.camYaw === 'number') this.camYaw += angDiff(this.camYaw, r.camYaw) * (1 - Math.exp(-16 * dt));
+      else this.camYaw += angDiff(this.camYaw, r.yaw + (r.drift ? -r.driftDir * 0.18 : 0)) * (1 - Math.exp(-6 * dt));
+      const back = (this.me === r ? ctl.look : r.lookBack) ? -7.5 : 7.5;
       const fx = Math.sin(this.camYaw), fz = Math.cos(this.camYaw);
       const tx = r.x - fx * back, tz = r.z - fz * back; const ty = Math.max(r.y + 3.1, this.track.groundHeight(tx, tz) + 1.5);
       let k = 1 - Math.exp(-10 * dt);
@@ -941,15 +943,15 @@ class Race {
     M4.trs(c.x, 0, c.z, 0, 0, 0, 1, this.track.skyMesh.m);
   }
   _hudUpdate(dt) {
-    const r = this.me, h = this.h; if (!r) return;
+    const h = this.h; if (!this.me) return; const r = this.spectate || this.me; // while spectating, the HUD shows that racer's place, lap, time, speed and coins
     const n = this.racers.filter(o => !o.elim).length;
-    const pl = r.elim ? (this.myKoPlace || r.place) : r.place;
+    const pl = r === this.me && r.elim ? (this.myKoPlace || r.place) : r.place;
     if (this._hp !== pl) { this._hp = pl; h.pos.innerHTML = `${pl}<sup>${ORD(pl).slice(-2)}</sup>`; h.pos.className = 'pos p' + Math.min(pl, 4); }
     h.lap.textContent = `${clamp(r.lap, 1, this.laps)}/${this.laps}`;
     h.time.textContent = fmtTime(r.finished ? r.ftime : this.raceTime);
     h.spd.textContent = Math.round(Math.abs(r.f) * 2);
     if (this._hc !== (r.coins || 0)) { this._hc = r.coins || 0; const hc = document.getElementById('hCoins'); if (hc) { hc.textContent = this._hc; hc.parentElement.classList.toggle('max', this._hc >= 20); } }
-    { const sf = document.getElementById('speedfx'); if (sf) { const tg = this.spectate ? 0 : (r.boost > 0 || r.torp > 0) ? 0.6 : clamp((r.f - 37) / 14, 0, 1) * 0.22; this._sf = lerp(this._sf || 0, tg, 0.15); sf.style.opacity = this._sf.toFixed(2); } }
+    { const sf = document.getElementById('speedfx'); if (sf) { const tg = (r.boost > 0 || r.torp > 0) ? 0.6 : clamp((r.f - 37) / 14, 0, 1) * 0.22; this._sf = lerp(this._sf || 0, tg, 0.15); sf.style.opacity = this._sf.toFixed(2); } }
     if (r.item === 'gold' && r.goldT > 0) this.h.itemN.textContent = Math.ceil(r.goldT) + 's';
     h.boostBar.className = 'drift ' + (r.drift ? (r.charge >= 2.6 ? 'l3' : r.charge >= 1.6 ? 'l2' : r.charge >= 0.7 ? 'l1' : 'l0') : '');
     if (this.mode === 'ko') h.ko.innerHTML = `<b>${n}</b> LEFT · next knockout <b>${Math.max(0, Math.ceil(this.koNext))}s</b>`;
@@ -963,14 +965,14 @@ class Race {
     // name tags
     for (const o of this.racers) {
       if (!o.tag) continue;
-      const p = o.elim ? null : this.R.project(o.x, o.y + 2.6, o.z);
+      const p = o.elim || o === this.spectate ? null : this.R.project(o.x, o.y + 2.6, o.z);
       if (!p || p.d > 90) { o.tag.style.display = 'none'; continue; }
       o.tag.style.display = ''; o.tag.style.transform = `translate(${p.x | 0}px,${p.y | 0}px) translate(-50%,-100%) scale(${clamp(30 / p.d, 0.55, 1).toFixed(2)})`;
     }
     // standings list (top-left mini)
     if (!this._lt || this.t - this._lt > 0.25) {
       this._lt = this.t;
-      h.list.innerHTML = this.order.slice(0, 12).map(o => `<div class="${o.local ? 'me' : ''} ${o.elim ? 'out' : ''}"><span>${o.place}</span>${esc(o.name)}</div>`).join('');
+      h.list.innerHTML = this.order.slice(0, 12).map(o => `<div class="${o.local || o === this.spectate ? 'me' : ''} ${o.elim ? 'out' : ''}"><span>${o.place}</span>${esc(o.name)}</div>`).join('');
     }
     if (this.spectate) h.sub.textContent = h.sub.textContent || '';
     if (this.flash > 0) { this.flash -= dt; document.getElementById('flash').style.opacity = this.flash; }
